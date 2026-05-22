@@ -1,0 +1,29 @@
+# Caddy reverse proxy — HTTPS automatique via Let's Encrypt
+# Le hostname doit pointer publiquement vers cette VM (nip.io fonctionne car
+# 34.214.142.8.nip.io → 34.214.142.8 automatiquement).
+
+34.214.142.8.nip.io {
+    encode gzip
+
+    # Augmente la limite du body pour les uploads (PDF/DOCX)
+    request_body {
+        max_size 20MB
+    }
+
+    # Routes /api/* → backend NestJS
+    @api path /api/*
+    handle @api {
+        reverse_proxy backend:4000
+    }
+
+    # Tout le reste → frontend Next.js
+    handle {
+        reverse_proxy frontend:3000
+    }
+
+    # Logs au format JSON, accessibles via `docker logs sesur_caddy_prod`
+    log {
+        output stdout
+        format console
+    }
+}

@@ -1,0 +1,56 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* SESUR brand palette */
+    --background: 40 20% 98%;         /* blanc cassé */
+    --foreground: 220 30% 12%;
+
+    --primary: 220 60% 18%;            /* bleu nuit */
+    --primary-foreground: 40 20% 98%;
+
+    --accent: 190 90% 50%;             /* cyan */
+    --accent-foreground: 220 30% 12%;
+
+    --success: 150 60% 38%;            /* vert validation */
+    --success-foreground: 0 0% 100%;
+
+    --destructive: 0 75% 50%;          /* rouge rejection */
+    --destructive-foreground: 0 0% 100%;
+
+    --muted: 220 14% 96%;
+    --muted-foreground: 220 10% 40%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 220 30% 12%;
+
+    --border: 220 13% 91%;
+    --input: 220 13% 91%;
+    --ring: 220 60% 18%;
+
+    --radius: 0.5rem;
+  }
+
+  .dark {
+    --background: 220 30% 8%;
+    --foreground: 40 20% 96%;
+    --primary: 190 90% 55%;
+    --primary-foreground: 220 30% 10%;
+    --accent: 190 90% 50%;
+    --accent-foreground: 220 30% 12%;
+    --success: 150 60% 45%;
+    --destructive: 0 70% 55%;
+    --muted: 220 20% 16%;
+    --muted-foreground: 220 10% 65%;
+    --card: 220 30% 12%;
+    --card-foreground: 40 20% 96%;
+    --border: 220 20% 20%;
+    --input: 220 20% 20%;
+    --ring: 190 90% 55%;
+  }
+
+  * { @apply border-border; }
+  body { @apply bg-background text-foreground antialiased; }
+}

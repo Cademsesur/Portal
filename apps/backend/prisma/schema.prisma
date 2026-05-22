@@ -1,0 +1,227 @@
+// SESUR FLOW — Prisma schema
+// Stockage primaire en PostgreSQL. Le DOCX est seulement un export.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────────────────────────────────────────
+// Enums
+// ─────────────────────────────────────────────────────────────
+
+enum Role {
+  SUPER_ADMIN
+  ADMIN
+  EMPLOYEE
+  MANAGER
+  DAF
+  PROCUREMENT
+}
+
+enum RequestType {
+  HARDWARE
+  SOFTWARE
+  SERVICE
+}
+
+enum RequestStatus {
+  DRAFT
+  SUBMITTED
+  UNDER_REVIEW
+  APPROVED
+  REJECTED
+  ORDERED
+}
+
+enum ApprovalStep {
+  MANAGER
+  DAF
+  PROCUREMENT
+}
+
+enum ApprovalDecision {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum DocType {
+  DOCX
+  PDF
+}
+
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  REVOKED
+  EXPIRED
+}
+
+// ─────────────────────────────────────────────────────────────
+// Models
+// ─────────────────────────────────────────────────────────────
+
+model User {
+  id           String     @id @default(cuid())
+  entraOid     String     @unique
+  email        String     @unique
+  displayName  String
+  role         Role       @default(EMPLOYEE)
+  departmentId String?
+  department   Department? @relation(fields: [departmentId], references: [id])
+  managerId    String?
+  manager      User?      @relation("ManagerHierarchy", fields: [managerId], references: [id])
+  reports      User[]     @relation("ManagerHierarchy")
+  isActive     Boolean    @default(true)
+  lastLoginAt  DateTime?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  purchaseRequests PurchaseRequest[]
+  approvals        Approval[]
+  notifications    Notification[]
+  auditLogs        AuditLog[]
+
+  invitationsSent     Invitation[] @relation("InvitationInvitedBy")
+  invitationAccepted  Invitation?  @relation("InvitationAcceptedBy")
+
+  @@index([email])
+  @@index([departmentId])
+}
+
+model Invitation {
+  id           String           @id @default(cuid())
+  email        String
+  role         Role
+  status       InvitationStatus @default(PENDING)
+  token        String           @unique
+  invitedById  String
+  invitedBy    User             @relation("InvitationInvitedBy", fields: [invitedById], references: [id])
+  expiresAt    DateTime
+  acceptedAt   DateTime?
+  acceptedById String?          @unique
+  acceptedBy   User?            @relation("InvitationAcceptedBy", fields: [acceptedById], references: [id])
+  revokedAt    DateTime?
+  lastSentAt   DateTime         @default(now())
+  resendCount  Int              @default(0)
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  @@index([email])
+  @@index([status])
+}
+
+model Department {
+  id        String    @id @default(cuid())
+  name      String    @unique
+  budgetCap Decimal?  @db.Decimal(14, 2)
+  createdAt DateTime  @default(now())
+  users     User[]
+}
+
+model PurchaseRequest {
+  id              String        @id @default(cuid())
+  reference       String        @unique
+  requesterId     String
+  requester       User          @relation(fields: [requesterId], references: [id])
+  type            RequestType
+  title           String
+  description     String
+  quantity        Int
+  estimatedBudget Decimal       @db.Decimal(14, 2)
+  currency        String        @default("XOF")
+  justification   String
+  status          RequestStatus @default(DRAFT)
+  currentStep     ApprovalStep?
+  submittedAt     DateTime?
+  closedAt        DateTime?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  attachments Attachment[]
+  approvals   Approval[]
+  documents   GeneratedDocument[]
+  auditLogs   AuditLog[]
+
+  @@index([requesterId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model Approval {
+  id         String           @id @default(cuid())
+  requestId  String
+  request    PurchaseRequest  @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  approverId String
+  approver   User             @relation(fields: [approverId], references: [id])
+  step       ApprovalStep
+  decision   ApprovalDecision @default(PENDING)
+  comment    String?
+  decidedAt  DateTime?
+  createdAt  DateTime         @default(now())
+
+  @@index([requestId])
+  @@index([approverId])
+}
+
+model Attachment {
+  id         String          @id @default(cuid())
+  requestId  String
+  request    PurchaseRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  filename   String
+  storageKey String
+  mimeType   String
+  sizeBytes  Int
+  uploadedAt DateTime        @default(now())
+
+  @@index([requestId])
+}
+
+model GeneratedDocument {
+  id          String          @id @default(cuid())
+  requestId   String
+  request     PurchaseRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  type        DocType
+  storageKey  String
+  generatedAt DateTime        @default(now())
+
+  @@index([requestId])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String
+  body      String
+  link      String?
+  readAt    DateTime?
+  createdAt DateTime @default(now())
+
+  @@index([userId, readAt])
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  actorId    String?
+  actor      User?    @relation(fields: [actorId], references: [id])
+  action     String
+  entityType String
+  entityId   String
+  metadata   Json?
+  ipAddress  String?
+  userAgent  String?
+  createdAt  DateTime @default(now())
+
+  requestId String?
+  request   PurchaseRequest? @relation(fields: [requestId], references: [id])
+
+  @@index([entityType, entityId])
+  @@index([actorId])
+  @@index([createdAt])
+}
