@@ -18,12 +18,16 @@ export const RequestStatus = {
 } as const;
 export type RequestStatus = (typeof RequestStatus)[keyof typeof RequestStatus];
 
-export const RequestType = {
+export const PurchaseType = {
   HARDWARE: 'HARDWARE',
-  SOFTWARE: 'SOFTWARE',
+  FURNITURE: 'FURNITURE',
+  SUPPLIES: 'SUPPLIES',
   SERVICE: 'SERVICE',
+  MAINTENANCE: 'MAINTENANCE',
+  SOFTWARE: 'SOFTWARE',
+  OTHER: 'OTHER',
 } as const;
-export type RequestType = (typeof RequestType)[keyof typeof RequestType];
+export type PurchaseType = (typeof PurchaseType)[keyof typeof PurchaseType];
 
 export const ApprovalStep = {
   MANAGER: 'MANAGER',

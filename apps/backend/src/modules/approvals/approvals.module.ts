@@ -1,9 +1,8 @@
 import { Module } from '@nestjs/common';
+import { DecideRequestUseCase } from './application/decide-request.usecase';
 
-/**
- * Module APPROVALS — validation Manager / DAF.
- * Écoute les events purchase-request.submitted et émet les events
- * approval.granted / approval.rejected.
- */
-@Module({})
+@Module({
+  providers: [DecideRequestUseCase],
+  exports: [DecideRequestUseCase],
+})
 export class ApprovalsModule {}

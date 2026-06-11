@@ -1,22 +1,19 @@
 import { Module } from '@nestjs/common';
+import { ApprovalsModule } from '../approvals/approvals.module';
+import { CreatePurchaseRequestUseCase } from './application/create-purchase-request.usecase';
+import { GetPurchaseRequestUseCase } from './application/get-purchase-request.usecase';
+import { ListMyRequestsUseCase } from './application/list-my-requests.usecase';
+import { ListPendingRequestsUseCase } from './application/list-pending-requests.usecase';
+import { PurchaseRequestsController } from './interfaces/purchase-requests.controller';
 
-/**
- * Module PURCHASE_REQUESTS — cœur métier.
- *
- * Couches :
- *  - domain/
- *     - purchase-request.entity.ts        agrégat + invariants
- *     - state-machine.ts                  transitions DRAFT → ORDERED
- *     - ports/                            interfaces (repository, doc-generator)
- *  - application/
- *     - create-request.usecase.ts
- *     - submit-request.usecase.ts
- *     - list-requests.usecase.ts
- *  - infrastructure/
- *     - purchase-request.prisma.repository.ts
- *  - interfaces/
- *     - purchase-requests.controller.ts
- *  - dto/                                  DTOs Zod (validation HTTP)
- */
-@Module({})
+@Module({
+  imports: [ApprovalsModule],
+  controllers: [PurchaseRequestsController],
+  providers: [
+    CreatePurchaseRequestUseCase,
+    GetPurchaseRequestUseCase,
+    ListMyRequestsUseCase,
+    ListPendingRequestsUseCase,
+  ],
+})
 export class PurchaseRequestsModule {}

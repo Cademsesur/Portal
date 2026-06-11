@@ -23,10 +23,14 @@ enum Role {
   PROCUREMENT
 }
 
-enum RequestType {
+enum PurchaseType {
   HARDWARE
-  SOFTWARE
+  FURNITURE
+  SUPPLIES
   SERVICE
+  MAINTENANCE
+  SOFTWARE
+  OTHER
 }
 
 enum RequestStatus {
@@ -130,13 +134,28 @@ model PurchaseRequest {
   reference       String        @unique
   requesterId     String
   requester       User          @relation(fields: [requesterId], references: [id])
-  type            RequestType
-  title           String
+
+  // Snapshot identification au moment de la demande
+  requesterName   String
+  department      String
+  jobTitle        String
+  lineManager     String
+
+  // Objet
+  purchaseTypes   PurchaseType[]
+  otherTypeDetail String?
   description     String
-  quantity        Int
-  estimatedBudget Decimal       @db.Decimal(14, 2)
+
+  // Justification & impact
+  objective         String
+  operationalImpact String
+  endUser           String
+
+  // Budget (rempli ultérieurement par la DAF/Procurement)
+  estimatedBudget Decimal?      @db.Decimal(14, 2)
   currency        String        @default("XOF")
-  justification   String
+
+  // Workflow
   status          RequestStatus @default(DRAFT)
   currentStep     ApprovalStep?
   submittedAt     DateTime?
@@ -144,6 +163,7 @@ model PurchaseRequest {
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
 
+  items       PurchaseRequestItem[]
   attachments Attachment[]
   approvals   Approval[]
   documents   GeneratedDocument[]
@@ -152,6 +172,20 @@ model PurchaseRequest {
   @@index([requesterId])
   @@index([status])
   @@index([createdAt])
+}
+
+model PurchaseRequestItem {
+  id              String          @id @default(cuid())
+  requestId       String
+  request         PurchaseRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  position        Int
+  description     String
+  quantity        Int
+  specifications  String          @default("")
+  desiredDeadline String          @default("")
+  observations    String          @default("")
+
+  @@index([requestId])
 }
 
 model Approval {
