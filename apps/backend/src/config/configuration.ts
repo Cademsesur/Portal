@@ -29,6 +29,12 @@ export default () => ({
       .map((d) => d.trim().toLowerCase()),
   },
 
+  google: {
+    clientId: process.env.GOOGLE_CLIENT_ID,
+    clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+    redirectUri: process.env.GOOGLE_REDIRECT_URI,
+  },
+
   auth: {
     superadminEmails: (process.env.SUPERADMIN_EMAILS ?? '')
       .split(',')

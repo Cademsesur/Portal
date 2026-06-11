@@ -68,7 +68,8 @@ enum InvitationStatus {
 
 model User {
   id           String     @id @default(cuid())
-  entraOid     String     @unique
+  entraOid     String?    @unique
+  googleSub    String?    @unique
   email        String     @unique
   displayName  String
   role         Role       @default(EMPLOYEE)

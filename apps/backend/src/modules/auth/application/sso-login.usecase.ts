@@ -5,12 +5,8 @@ import { InvitationStatus } from '@prisma/client';
 import { Role } from '@sesur/shared';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuthTokenPair } from '../domain/auth-token.vo';
-import type { MicrosoftProfile } from '../domain/microsoft-profile.vo';
+import type { SsoProfile, SsoProvider } from '../domain/sso-profile.vo';
 
-/**
- * Use case — Connexion via Microsoft Entra ID avec Just-In-Time Provisioning.
- * Couche APPLICATION — orchestre le domaine, dépend d'abstractions injectées.
- */
 @Injectable()
 export class SsoLoginUseCase {
   constructor(
@@ -19,15 +15,20 @@ export class SsoLoginUseCase {
     private readonly config: ConfigService,
   ) {}
 
-  async execute(profile: MicrosoftProfile): Promise<AuthTokenPair> {
-    this.assertDomainAllowed(profile.email);
+  async execute(profile: SsoProfile): Promise<AuthTokenPair> {
+    if (profile.provider === 'microsoft') {
+      this.assertMicrosoftDomainAllowed(profile.email);
+    }
     const email = profile.email.toLowerCase();
+    const idField = this.providerIdField(profile.provider);
 
     const user = await this.prisma.$transaction(async (tx) => {
-      const byOid = await tx.user.findUnique({ where: { entraOid: profile.oid } });
-      if (byOid) {
+      const byProviderId = await tx.user.findUnique({
+        where: { [idField]: profile.providerId } as { entraOid: string } | { googleSub: string },
+      });
+      if (byProviderId) {
         return tx.user.update({
-          where: { id: byOid.id },
+          where: { id: byProviderId.id },
           data: {
             email,
             displayName: profile.displayName,
@@ -42,7 +43,7 @@ export class SsoLoginUseCase {
         return tx.user.update({
           where: { id: byEmail.id },
           data: {
-            entraOid: profile.oid,
+            [idField]: profile.providerId,
             displayName: profile.displayName,
             lastLoginAt: new Date(),
             ...(this.isSuperadminEmail(email) ? { role: Role.SUPER_ADMIN } : {}),
@@ -53,7 +54,7 @@ export class SsoLoginUseCase {
       if (this.isSuperadminEmail(email)) {
         return tx.user.create({
           data: {
-            entraOid: profile.oid,
+            [idField]: profile.providerId,
             email,
             displayName: profile.displayName,
             role: Role.SUPER_ADMIN,
@@ -81,7 +82,7 @@ export class SsoLoginUseCase {
 
       const created = await tx.user.create({
         data: {
-          entraOid: profile.oid,
+          [idField]: profile.providerId,
           email,
           displayName: profile.displayName,
           role: invitation.role,
@@ -106,7 +107,11 @@ export class SsoLoginUseCase {
     return this.issueTokens(user.id, user.email, user.role as Role, user.departmentId);
   }
 
-  private assertDomainAllowed(email: string): void {
+  private providerIdField(provider: SsoProvider): 'entraOid' | 'googleSub' {
+    return provider === 'microsoft' ? 'entraOid' : 'googleSub';
+  }
+
+  private assertMicrosoftDomainAllowed(email: string): void {
     const allowed = this.config.get<string[]>('entra.allowedDomains') ?? [];
     const domain = email.split('@')[1]?.toLowerCase();
     if (!domain || !allowed.includes(domain)) {

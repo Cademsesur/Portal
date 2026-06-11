@@ -24,7 +24,12 @@ import { HealthModule } from './modules/health/health.module';
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: [join(process.cwd(), '../../.env'), join(process.cwd(), '.env')],
+      envFilePath: [
+        join(process.cwd(), '../../.env.local'),
+        join(process.cwd(), '.env.local'),
+        join(process.cwd(), '../../.env'),
+        join(process.cwd(), '.env'),
+      ],
       load: [configuration],
       validate: validateEnv,
     }),

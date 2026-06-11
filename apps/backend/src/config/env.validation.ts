@@ -22,6 +22,11 @@ const envSchema = z.object({
   ENTRA_REDIRECT_URI: z.string().url().optional(),
   ENTRA_ALLOWED_EMAIL_DOMAINS: z.string().default('sesur.com,sesur.bj'),
 
+  // Google OAuth — optionnels au boot, requis pour activer le SSO Google
+  GOOGLE_CLIENT_ID: z.string().optional(),
+  GOOGLE_CLIENT_SECRET: z.string().optional(),
+  GOOGLE_REDIRECT_URI: z.string().url().optional(),
+
   // Emails promus automatiquement en SUPER_ADMIN au login SSO (CSV)
   SUPERADMIN_EMAILS: z.string().default(''),
 
