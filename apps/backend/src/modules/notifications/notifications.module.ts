@@ -1,8 +1,7 @@
 import { Module } from '@nestjs/common';
+import { PurchaseRequestMailerListener } from './application/purchase-request-mailer.listener';
 
-/**
- * Module NOTIFICATIONS — in-app (DB + WebSocket).
- * Listeners EventEmitter2 → push notification + persist.
- */
-@Module({})
+@Module({
+  providers: [PurchaseRequestMailerListener],
+})
 export class NotificationsModule {}

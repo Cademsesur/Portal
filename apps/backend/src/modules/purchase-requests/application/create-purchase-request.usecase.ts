@@ -1,6 +1,11 @@
 import { Injectable } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { RequestStatus } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
+import {
+  PURCHASE_REQUEST_SUBMITTED,
+  type PurchaseRequestSubmittedEvent,
+} from '../domain/events';
 import type { CreatePurchaseRequestDto } from '../dto/create-purchase-request.dto';
 import { generatePurchaseRequestReference } from '../infrastructure/reference-generator';
 import { toPurchaseRequestDetail, type PurchaseRequestDetail } from './purchase-request.mapper';
@@ -11,7 +16,10 @@ interface ExecuteOptions {
 
 @Injectable()
 export class CreatePurchaseRequestUseCase {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly events: EventEmitter2,
+  ) {}
 
   async execute(
     dto: CreatePurchaseRequestDto,
@@ -51,8 +59,22 @@ export class CreatePurchaseRequestUseCase {
       include: {
         items: { orderBy: { position: 'asc' } },
         approvals: { orderBy: { createdAt: 'desc' } },
+        requester: { select: { email: true } },
       },
     });
+
+    if (submit) {
+      const event: PurchaseRequestSubmittedEvent = {
+        requestId: request.id,
+        reference: request.reference,
+        requesterId: request.requesterId,
+        requesterName: request.requesterName,
+        requesterEmail: request.requester.email,
+        department: request.department,
+        description: request.description,
+      };
+      this.events.emit(PURCHASE_REQUEST_SUBMITTED, event);
+    }
 
     return toPurchaseRequestDetail(request);
   }

@@ -4,6 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import {
   ApprovalDecision,
   ApprovalStep,
@@ -15,6 +16,10 @@ import {
   toPurchaseRequestDetail,
   type PurchaseRequestDetail,
 } from '../../purchase-requests/application/purchase-request.mapper';
+import {
+  PURCHASE_REQUEST_DECIDED,
+  type PurchaseRequestDecidedEvent,
+} from '../../purchase-requests/domain/events';
 
 const DECIDER_ROLES: Role[] = [Role.DAF, Role.SUPER_ADMIN];
 
@@ -28,14 +33,17 @@ interface DecideInput {
 
 @Injectable()
 export class DecideRequestUseCase {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly events: EventEmitter2,
+  ) {}
 
   async execute(input: DecideInput): Promise<PurchaseRequestDetail> {
     if (!DECIDER_ROLES.includes(input.approverRole)) {
       throw new ForbiddenException("Seuls les DAF peuvent valider une demande");
     }
 
-    return this.prisma.$transaction(async (tx) => {
+    const detail = await this.prisma.$transaction(async (tx) => {
       const request = await tx.purchaseRequest.findUnique({
         where: { id: input.requestId },
       });
@@ -81,10 +89,34 @@ export class DecideRequestUseCase {
         include: {
           items: { orderBy: { position: 'asc' } },
           approvals: { orderBy: { createdAt: 'desc' } },
+          requester: { select: { email: true } },
         },
       });
 
-      return toPurchaseRequestDetail(updated);
+      return {
+        detail: toPurchaseRequestDetail(updated),
+        requesterEmail: updated.requester.email,
+        requesterName: updated.requesterName,
+      };
     });
+
+    const approver = await this.prisma.user.findUnique({
+      where: { id: input.approverId },
+      select: { displayName: true },
+    });
+
+    const event: PurchaseRequestDecidedEvent = {
+      requestId: detail.detail.id,
+      reference: detail.detail.reference,
+      decision: input.decision,
+      comment: input.comment?.trim() || null,
+      requesterId: input.requestId,
+      requesterEmail: detail.requesterEmail,
+      requesterName: detail.requesterName,
+      approverName: approver?.displayName ?? 'la DAF',
+    };
+    this.events.emit(PURCHASE_REQUEST_DECIDED, event);
+
+    return detail.detail;
   }
 }
