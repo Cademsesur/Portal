@@ -21,11 +21,13 @@ import {
   purchaseRequestFormSchema,
   type PurchaseRequestFormValues,
 } from '@/features/requests/schemas/purchase-request-form.schema';
-import { addRequest } from '@/features/requests/store/local-store';
+import { useCreateRequest } from '@/features/requests/hooks/use-create-request';
+import type { CreatePurchaseRequestDto } from '@sesur/shared';
 
 export default function NewRequestPage() {
   const router = useRouter();
   const { data: user } = useCurrentUser();
+  const createMutation = useCreateRequest();
 
   const {
     register,
@@ -77,8 +79,8 @@ export default function NewRequestPage() {
     );
   }
 
-  const onSubmit = handleSubmit((values) => {
-    const created = addRequest(values);
+  const onSubmit = handleSubmit(async (values) => {
+    const created = await createMutation.mutateAsync(values as CreatePurchaseRequestDto);
     router.push(`/requests/${created.id}` as never);
   });
 

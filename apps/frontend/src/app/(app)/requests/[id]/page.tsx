@@ -2,7 +2,6 @@
 
 import { use } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import {
   ArrowLeft,
   CheckCircle2,
@@ -13,12 +12,12 @@ import {
 } from 'lucide-react';
 import { useCurrentUser } from '@/features/auth/hooks/use-current-user';
 import { BRAND, canValidate } from '@/lib/brand';
-import {
-  updateRequestStatus,
-  useRequest,
-  type RequestStatus,
-  type StoredRequest,
-} from '@/features/requests/store/local-store';
+import { useRequest } from '@/features/requests/hooks/use-request';
+import { useDecideRequest } from '@/features/requests/hooks/use-decide-request';
+import type {
+  PurchaseRequestDetail,
+  RequestStatus,
+} from '@/features/requests/api/requests.api';
 import { PURCHASE_TYPES } from '@/features/requests/schemas/purchase-request-form.schema';
 import { StatusBadge } from '@/features/requests/components/status-badge';
 
@@ -28,11 +27,12 @@ export default function RequestDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
-  const router = useRouter();
   const { data: user } = useCurrentUser();
-  const request = useRequest(id);
+  const { data: request, isLoading } = useRequest(id);
+  const decideMutation = useDecideRequest(id);
 
   if (!user) return null;
+  if (isLoading) return null;
 
   if (!request) {
     return (
@@ -69,7 +69,7 @@ export default function RequestDetailPage({
       decision === 'REJECTED'
         ? window.prompt('Motif du rejet (optionnel) :') ?? undefined
         : window.prompt('Commentaire (optionnel) :') ?? undefined;
-    updateRequestStatus(request.id, decision, comment);
+    decideMutation.mutate({ decision, comment: comment || undefined });
   };
 
   return (
@@ -159,7 +159,7 @@ export default function RequestDetailPage({
   );
 }
 
-function Timeline({ request }: { request: StoredRequest }) {
+function Timeline({ request }: { request: PurchaseRequestDetail }) {
   const steps: Array<{ label: string; date: string | null; state: 'done' | 'current' | 'upcoming' }> = [
     {
       label: 'Soumission',
@@ -239,7 +239,7 @@ function Timeline({ request }: { request: StoredRequest }) {
   );
 }
 
-function RequestSheet({ request }: { request: StoredRequest }) {
+function RequestSheet({ request }: { request: PurchaseRequestDetail }) {
   const selectedTypes = PURCHASE_TYPES.filter((t) =>
     request.purchaseTypes.includes(t.key),
   );

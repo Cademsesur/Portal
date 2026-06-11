@@ -10,7 +10,8 @@ import {
 } from 'lucide-react';
 import { useCurrentUser } from '@/features/auth/hooks/use-current-user';
 import { BRAND, isEmployeeLike } from '@/lib/brand';
-import { useRequests, type RequestStatus } from '@/features/requests/store/local-store';
+import { useMyRequests } from '@/features/requests/hooks/use-my-requests';
+import type { RequestStatus } from '@/features/requests/api/requests.api';
 import { StatusBadge } from '@/features/requests/components/status-badge';
 
 const STATUS_FILTERS: Array<{ key: 'ALL' | RequestStatus; label: string }> = [
@@ -23,7 +24,7 @@ const STATUS_FILTERS: Array<{ key: 'ALL' | RequestStatus; label: string }> = [
 
 export default function RequestsPage() {
   const { data: user } = useCurrentUser();
-  const requests = useRequests();
+  const { data: requests = [] } = useMyRequests();
   const [filter, setFilter] = useState<(typeof STATUS_FILTERS)[number]['key']>('ALL');
   const [search, setSearch] = useState('');
 
@@ -155,7 +156,7 @@ export default function RequestsPage() {
                     </td>
                     <td className="px-6 py-3 text-slate-600">
                       <Link href={`/requests/${r.id}` as never}>
-                        {r.items.length}
+                        {r.itemCount}
                       </Link>
                     </td>
                     <td className="px-6 py-3">

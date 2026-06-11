@@ -14,11 +14,12 @@ import {
 } from 'lucide-react';
 import { useCurrentUser } from '@/features/auth/hooks/use-current-user';
 import { BRAND, canValidate } from '@/lib/brand';
-import {
-  useRequests,
-  type RequestStatus,
-  type StoredRequest,
-} from '@/features/requests/store/local-store';
+import { useMyRequests } from '@/features/requests/hooks/use-my-requests';
+import { usePendingRequests } from '@/features/requests/hooks/use-pending-requests';
+import type {
+  PurchaseRequestSummary,
+  RequestStatus,
+} from '@/features/requests/api/requests.api';
 import { StatusBadge } from '@/features/requests/components/status-badge';
 
 type TabKey = 'PENDING' | 'APPROVED' | 'REJECTED';
@@ -31,27 +32,30 @@ const TABS: Array<{ key: TabKey; label: string; icon: LucideIcon }> = [
 
 export default function ApprovalsPage() {
   const { data: user } = useCurrentUser();
-  const requests = useRequests();
+  const { data: pending = [] } = usePendingRequests();
+  const { data: mine = [] } = useMyRequests();
   const [tab, setTab] = useState<TabKey>('PENDING');
   const [search, setSearch] = useState('');
 
-  const counts = useMemo(
-    () => ({
-      pending: requests.filter(
-        (r) => r.status === 'SUBMITTED' || r.status === 'UNDER_REVIEW',
-      ).length,
-      approved: requests.filter((r) => r.status === 'APPROVED').length,
-      rejected: requests.filter((r) => r.status === 'REJECTED').length,
-    }),
-    [requests],
+  const approved = useMemo(
+    () => mine.filter((r) => r.status === 'APPROVED'),
+    [mine],
   );
+  const rejected = useMemo(
+    () => mine.filter((r) => r.status === 'REJECTED'),
+    [mine],
+  );
+
+  const counts = {
+    pending: pending.length,
+    approved: approved.length,
+    rejected: rejected.length,
+  };
 
   const filtered = useMemo(() => {
     const term = search.trim().toLowerCase();
-    const byTab = requests.filter((r) => {
-      if (tab === 'PENDING') return r.status === 'SUBMITTED' || r.status === 'UNDER_REVIEW';
-      return r.status === tab;
-    });
+    const byTab: PurchaseRequestSummary[] =
+      tab === 'PENDING' ? pending : tab === 'APPROVED' ? approved : rejected;
     if (!term) return byTab;
     return byTab.filter(
       (r) =>
@@ -59,7 +63,7 @@ export default function ApprovalsPage() {
         r.requesterName.toLowerCase().includes(term) ||
         r.description.toLowerCase().includes(term),
     );
-  }, [requests, tab, search]);
+  }, [pending, approved, rejected, tab, search]);
 
   if (!user) return null;
 
@@ -175,7 +179,7 @@ export default function ApprovalsPage() {
   );
 }
 
-function RequestList({ rows }: { rows: StoredRequest[] }) {
+function RequestList({ rows }: { rows: PurchaseRequestSummary[] }) {
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-sm">
@@ -204,7 +208,7 @@ function RequestList({ rows }: { rows: StoredRequest[] }) {
               <td className="px-6 py-3 text-slate-600">
                 <span className="line-clamp-1">{summarize(r.description)}</span>
               </td>
-              <td className="px-6 py-3 text-slate-600">{r.items.length}</td>
+              <td className="px-6 py-3 text-slate-600">{r.itemCount}</td>
               <td className="px-6 py-3">
                 <StatusBadge status={r.status as RequestStatus} />
               </td>
