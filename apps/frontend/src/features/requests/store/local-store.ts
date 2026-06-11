@@ -16,20 +16,40 @@ export interface StoredRequest extends PurchaseRequestFormValues {
 }
 
 const KEY = 'sesur:requests:v1';
+const EMPTY: StoredRequest[] = [];
+
+let cachedRaw: string | null = null;
+let cachedSnapshot: StoredRequest[] = EMPTY;
 
 function read(): StoredRequest[] {
-  if (typeof window === 'undefined') return [];
+  if (typeof window === 'undefined') return EMPTY;
+  let raw: string | null;
   try {
-    const raw = window.localStorage.getItem(KEY);
-    return raw ? (JSON.parse(raw) as StoredRequest[]) : [];
+    raw = window.localStorage.getItem(KEY);
   } catch {
-    return [];
+    return EMPTY;
   }
+  if (raw === cachedRaw) return cachedSnapshot;
+  cachedRaw = raw;
+  if (!raw) {
+    cachedSnapshot = EMPTY;
+    return cachedSnapshot;
+  }
+  try {
+    cachedSnapshot = JSON.parse(raw) as StoredRequest[];
+  } catch {
+    cachedSnapshot = EMPTY;
+  }
+  return cachedSnapshot;
 }
 
 function write(data: StoredRequest[]): void {
   if (typeof window === 'undefined') return;
-  window.localStorage.setItem(KEY, JSON.stringify(data));
+  const serialized = JSON.stringify(data);
+  window.localStorage.setItem(KEY, serialized);
+  // Sync cache immediately so the next read() returns the new snapshot
+  cachedRaw = serialized;
+  cachedSnapshot = data;
   window.dispatchEvent(new Event('sesur:requests:changed'));
 }
 
@@ -99,11 +119,7 @@ function subscribe(callback: () => void): () => void {
 }
 
 export function useRequests(): StoredRequest[] {
-  return useSyncExternalStore(
-    subscribe,
-    () => read(),
-    () => [],
-  );
+  return useSyncExternalStore(subscribe, read, () => EMPTY);
 }
 
 export function useRequest(id: string | undefined): StoredRequest | undefined {
