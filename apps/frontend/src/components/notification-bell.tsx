@@ -1,5 +1,6 @@
 'use client';
 
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import {
   Bell,
@@ -35,6 +36,27 @@ interface Notification {
   tone: 'pending' | 'approved' | 'rejected';
 }
 
+const SEEN_KEY = 'sesur:notif-seen:v1';
+
+function loadSeen(): Set<string> {
+  if (typeof window === 'undefined') return new Set();
+  try {
+    const raw = window.localStorage.getItem(SEEN_KEY);
+    return new Set(raw ? (JSON.parse(raw) as string[]) : []);
+  } catch {
+    return new Set();
+  }
+}
+
+function persistSeen(seen: Set<string>): void {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(SEEN_KEY, JSON.stringify(Array.from(seen)));
+  } catch {
+    /* localStorage might be disabled — silently ignore */
+  }
+}
+
 export function NotificationBell() {
   const { data: user } = useCurrentUser();
   const isDaf = canValidate(user?.role);
@@ -42,14 +64,54 @@ export function NotificationBell() {
   const { data: pending = [] } = usePendingRequests({ enabled: isDaf });
   const { data: myRequests = [] } = useMyRequests({ enabled: !!user && !isDaf });
 
-  const notifications = isDaf
-    ? buildDafNotifications(pending)
-    : buildEmployeeNotifications(myRequests);
+  const notifications = useMemo(
+    () =>
+      isDaf
+        ? buildDafNotifications(pending)
+        : buildEmployeeNotifications(myRequests),
+    [isDaf, pending, myRequests],
+  );
 
-  const unreadCount = notifications.length;
+  const [seen, setSeen] = useState<Set<string>>(() => new Set());
+  const [hydrated, setHydrated] = useState(false);
+  const [open, setOpen] = useState(false);
+
+  useEffect(() => {
+    setSeen(loadSeen());
+    setHydrated(true);
+  }, []);
+
+  const unread = hydrated
+    ? notifications.filter((n) => !seen.has(n.id))
+    : [];
+  const unreadCount = unread.length;
+
+  const markAllSeen = useCallback(() => {
+    if (notifications.length === 0) return;
+    setSeen((prev) => {
+      let changed = false;
+      const next = new Set(prev);
+      for (const n of notifications) {
+        if (!next.has(n.id)) {
+          next.add(n.id);
+          changed = true;
+        }
+      }
+      if (!changed) return prev;
+      persistSeen(next);
+      return next;
+    });
+  }, [notifications]);
+
+  const handleOpenChange = (nextOpen: boolean) => {
+    setOpen(nextOpen);
+    if (nextOpen) {
+      markAllSeen();
+    }
+  };
 
   return (
-    <DropdownMenu>
+    <DropdownMenu open={open} onOpenChange={handleOpenChange}>
       <DropdownMenuTrigger asChild>
         <button
           type="button"
@@ -60,7 +122,7 @@ export function NotificationBell() {
           {unreadCount > 0 && (
             <span
               aria-hidden
-              className="absolute -right-0.5 -top-0.5 flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-semibold text-destructive-foreground"
+              className="absolute -right-0.5 -top-0.5 flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-semibold text-destructive-foreground animate-fade-in"
             >
               {unreadCount > 9 ? '9+' : unreadCount}
             </span>
@@ -70,11 +132,11 @@ export function NotificationBell() {
       <DropdownMenuContent align="end" className="w-80 p-0">
         <div className="flex items-center justify-between px-3 py-2.5">
           <DropdownMenuLabel className="p-0">Notifications</DropdownMenuLabel>
-          {unreadCount > 0 && (
-            <span className="text-[10px] font-semibold text-primary">
-              {unreadCount} nouvelle{unreadCount > 1 ? 's' : ''}
-            </span>
-          )}
+          <span className="text-[10px] font-medium text-muted-foreground">
+            {notifications.length === 0
+              ? 'À jour'
+              : `${notifications.length} récente${notifications.length > 1 ? 's' : ''}`}
+          </span>
         </div>
         <DropdownMenuSeparator />
         {notifications.length === 0 ? (
@@ -92,7 +154,11 @@ export function NotificationBell() {
         ) : (
           <ul className="max-h-[360px] overflow-y-auto">
             {notifications.map((n) => (
-              <NotificationItem key={n.id} notification={n} />
+              <NotificationItem
+                key={n.id}
+                notification={n}
+                unread={hydrated && !seen.has(n.id)}
+              />
             ))}
           </ul>
         )}
@@ -112,7 +178,13 @@ export function NotificationBell() {
   );
 }
 
-function NotificationItem({ notification }: { notification: Notification }) {
+function NotificationItem({
+  notification,
+  unread,
+}: {
+  notification: Notification;
+  unread: boolean;
+}) {
   const Icon: LucideIcon =
     notification.tone === 'approved'
       ? CheckCircle2
@@ -129,7 +201,10 @@ function NotificationItem({ notification }: { notification: Notification }) {
     <li>
       <Link
         href={notification.href as never}
-        className="flex items-start gap-3 px-3 py-2.5 transition-colors hover:bg-muted/60"
+        className={cn(
+          'relative flex items-start gap-3 px-3 py-2.5 transition-colors hover:bg-muted/60',
+          unread && 'bg-primary-soft/40',
+        )}
       >
         <span className={iconClass}>
           <Icon className="h-4 w-4" />
@@ -145,6 +220,12 @@ function NotificationItem({ notification }: { notification: Notification }) {
             {notification.when}
           </p>
         </div>
+        {unread && (
+          <span
+            aria-hidden
+            className="mt-2 h-2 w-2 shrink-0 rounded-full bg-primary"
+          />
+        )}
       </Link>
     </li>
   );
