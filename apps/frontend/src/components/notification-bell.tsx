@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import { useQueryClient } from '@tanstack/react-query';
 import {
   Bell,
   CheckCircle2,
@@ -60,6 +61,7 @@ function persistSeen(seen: Set<string>): void {
 export function NotificationBell() {
   const { data: user } = useCurrentUser();
   const isDaf = canValidate(user?.role);
+  const queryClient = useQueryClient();
 
   const { data: pending = [] } = usePendingRequests({ enabled: isDaf });
   const { data: myRequests = [] } = useMyRequests({ enabled: !!user && !isDaf });
@@ -110,6 +112,22 @@ export function NotificationBell() {
     }
   };
 
+  const handleItemClick = useCallback(
+    (id: string) => {
+      setSeen((prev) => {
+        if (prev.has(id)) return prev;
+        const next = new Set(prev);
+        next.add(id);
+        persistSeen(next);
+        return next;
+      });
+      // Refresh the lists so they reflect any state change made on the target page.
+      queryClient.invalidateQueries({ queryKey: ['requests'] });
+      setOpen(false);
+    },
+    [queryClient],
+  );
+
   return (
     <DropdownMenu open={open} onOpenChange={handleOpenChange}>
       <DropdownMenuTrigger asChild>
@@ -158,6 +176,7 @@ export function NotificationBell() {
                 key={n.id}
                 notification={n}
                 unread={hydrated && !seen.has(n.id)}
+                onClick={() => handleItemClick(n.id)}
               />
             ))}
           </ul>
@@ -181,9 +200,11 @@ export function NotificationBell() {
 function NotificationItem({
   notification,
   unread,
+  onClick,
 }: {
   notification: Notification;
   unread: boolean;
+  onClick: () => void;
 }) {
   const Icon: LucideIcon =
     notification.tone === 'approved'
@@ -201,6 +222,7 @@ function NotificationItem({
     <li>
       <Link
         href={notification.href as never}
+        onClick={onClick}
         className={cn(
           'relative flex items-start gap-3 px-3 py-2.5 transition-colors hover:bg-muted/60',
           unread && 'bg-primary-soft/40',
