@@ -5,8 +5,11 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
 import { ZodValidationPipe } from 'nestjs-zod';
+import { installFrenchZodErrorMap } from '@sesur/shared';
 import { AppModule } from './app.module';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
+
+installFrenchZodErrorMap();
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, { bufferLogs: true });

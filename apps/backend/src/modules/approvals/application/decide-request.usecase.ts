@@ -21,7 +21,7 @@ import {
   type PurchaseRequestDecidedEvent,
 } from '../../purchase-requests/domain/events';
 
-const DECIDER_ROLES: Role[] = [Role.DAF, Role.SUPER_ADMIN];
+const DECIDER_ROLES: Role[] = [Role.DAF];
 
 interface DecideInput {
   requestId: string;

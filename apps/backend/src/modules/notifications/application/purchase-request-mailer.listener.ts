@@ -29,7 +29,7 @@ export class PurchaseRequestMailerListener {
   async onSubmitted(event: PurchaseRequestSubmittedEvent): Promise<void> {
     const recipients = await this.prisma.user.findMany({
       where: {
-        role: { in: [Role.DAF, Role.SUPER_ADMIN] },
+        role: Role.DAF,
         isActive: true,
       },
       select: { email: true },
@@ -37,7 +37,7 @@ export class PurchaseRequestMailerListener {
 
     if (recipients.length === 0) {
       this.logger.warn(
-        `Aucun DAF/SUPER_ADMIN actif pour notifier la soumission de ${event.reference}`,
+        `Aucun DAF actif pour notifier la soumission de ${event.reference}`,
       );
       return;
     }

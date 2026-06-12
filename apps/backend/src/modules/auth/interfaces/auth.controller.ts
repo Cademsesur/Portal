@@ -1,10 +1,10 @@
 import { randomBytes } from 'node:crypto';
 import {
-  BadRequestException,
   Controller,
   Get,
   HttpCode,
   InternalServerErrorException,
+  Logger,
   Post,
   Query,
   Req,
@@ -17,7 +17,13 @@ import type { Request, Response } from 'express';
 import { CurrentUser, type AuthenticatedUser } from '../../../common/decorators/current-user.decorator';
 import { Public } from '../../../common/decorators/public.decorator';
 import { SsoLoginUseCase } from '../application/sso-login.usecase';
-import type { SsoProfile } from '../domain/sso-profile.vo';
+import type { SsoProfile, SsoProvider } from '../domain/sso-profile.vo';
+
+class SsoCallbackError extends Error {
+  constructor(public readonly reason: string, public readonly detail?: string) {
+    super(reason);
+  }
+}
 
 const MS_STATE_COOKIE = 'sesur_oauth_state';
 const GOOGLE_STATE_COOKIE = 'sesur_google_oauth_state';
@@ -35,6 +41,8 @@ interface OidcTokenResponse {
 @ApiTags('auth')
 @Controller('auth')
 export class AuthController {
+  private readonly logger = new Logger(AuthController.name);
+
   constructor(
     private readonly ssoLogin: SsoLoginUseCase,
     private readonly config: ConfigService,
@@ -78,27 +86,27 @@ export class AuthController {
     @Req() req: Request,
     @Res() res: Response,
   ): Promise<void> {
-    if (error) {
-      throw new UnauthorizedException(`Microsoft SSO error: ${error} — ${errorDescription ?? ''}`);
+    try {
+      if (error) {
+        throw new SsoCallbackError('provider_error', `${error} — ${errorDescription ?? ''}`);
+      }
+      if (!code || !state) {
+        throw new SsoCallbackError('missing_params');
+      }
+      const cookieState = (req.cookies as Record<string, string> | undefined)?.[MS_STATE_COOKIE];
+      res.clearCookie(MS_STATE_COOKIE, { path: '/api/v1/auth/microsoft/callback' });
+      if (!cookieState || cookieState !== state) {
+        throw new SsoCallbackError('state_invalid');
+      }
+
+      const tokens = await this.exchangeMicrosoftCode(code);
+      const profile = this.decodeMicrosoftIdToken(tokens.id_token);
+      const pair = await this.ssoLogin.execute(profile);
+      this.setAuthCookies(res, pair.accessToken, pair.refreshToken, pair.expiresInSec);
+      res.redirect(`${this.frontendUrl()}/dashboard`);
+    } catch (err) {
+      this.redirectWithError(res, 'microsoft', err);
     }
-    if (!code || !state) {
-      throw new BadRequestException('Paramètres OIDC manquants (code/state)');
-    }
-
-    const cookieState = (req.cookies as Record<string, string> | undefined)?.[MS_STATE_COOKIE];
-    res.clearCookie(MS_STATE_COOKIE, { path: '/api/v1/auth/microsoft/callback' });
-    if (!cookieState || cookieState !== state) {
-      throw new UnauthorizedException('State OIDC invalide (CSRF)');
-    }
-
-    const tokens = await this.exchangeMicrosoftCode(code);
-    const profile = this.decodeMicrosoftIdToken(tokens.id_token);
-
-    const pair = await this.ssoLogin.execute(profile);
-    this.setAuthCookies(res, pair.accessToken, pair.refreshToken, pair.expiresInSec);
-
-    const frontendUrl = this.config.get<string>('frontendUrl') ?? 'http://localhost:3000';
-    res.redirect(`${frontendUrl}/dashboard`);
   }
 
   private async exchangeMicrosoftCode(code: string): Promise<OidcTokenResponse> {
@@ -185,27 +193,27 @@ export class AuthController {
     @Req() req: Request,
     @Res() res: Response,
   ): Promise<void> {
-    if (error) {
-      throw new UnauthorizedException(`Google SSO error: ${error}`);
+    try {
+      if (error) {
+        throw new SsoCallbackError('provider_error', error);
+      }
+      if (!code || !state) {
+        throw new SsoCallbackError('missing_params');
+      }
+      const cookieState = (req.cookies as Record<string, string> | undefined)?.[GOOGLE_STATE_COOKIE];
+      res.clearCookie(GOOGLE_STATE_COOKIE, { path: '/api/v1/auth/google/callback' });
+      if (!cookieState || cookieState !== state) {
+        throw new SsoCallbackError('state_invalid');
+      }
+
+      const tokens = await this.exchangeGoogleCode(code);
+      const profile = this.decodeGoogleIdToken(tokens.id_token);
+      const pair = await this.ssoLogin.execute(profile);
+      this.setAuthCookies(res, pair.accessToken, pair.refreshToken, pair.expiresInSec);
+      res.redirect(`${this.frontendUrl()}/dashboard`);
+    } catch (err) {
+      this.redirectWithError(res, 'google', err);
     }
-    if (!code || !state) {
-      throw new BadRequestException('Paramètres OIDC manquants (code/state)');
-    }
-
-    const cookieState = (req.cookies as Record<string, string> | undefined)?.[GOOGLE_STATE_COOKIE];
-    res.clearCookie(GOOGLE_STATE_COOKIE, { path: '/api/v1/auth/google/callback' });
-    if (!cookieState || cookieState !== state) {
-      throw new UnauthorizedException('State OIDC invalide (CSRF)');
-    }
-
-    const tokens = await this.exchangeGoogleCode(code);
-    const profile = this.decodeGoogleIdToken(tokens.id_token);
-
-    const pair = await this.ssoLogin.execute(profile);
-    this.setAuthCookies(res, pair.accessToken, pair.refreshToken, pair.expiresInSec);
-
-    const frontendUrl = this.config.get<string>('frontendUrl') ?? 'http://localhost:3000';
-    res.redirect(`${frontendUrl}/dashboard`);
   }
 
   private async exchangeGoogleCode(code: string): Promise<OidcTokenResponse> {
@@ -321,6 +329,22 @@ export class AuthController {
     return this.config.get<string>('nodeEnv') === 'production';
   }
 
+  private frontendUrl(): string {
+    return this.config.get<string>('frontendUrl') ?? 'http://localhost:3000';
+  }
+
+  private redirectWithError(res: Response, provider: SsoProvider, err: unknown): void {
+    const detail = err instanceof Error ? err.message : String(err);
+    const reason = err instanceof SsoCallbackError ? err.reason : mapBusinessErrorToReason(detail);
+    this.logger.warn(`SSO ${provider} callback failed (${reason}): ${detail}`);
+
+    const url = new URL(`${this.frontendUrl()}/login`);
+    url.searchParams.set('error', 'sso');
+    url.searchParams.set('provider', provider);
+    url.searchParams.set('reason', reason);
+    res.redirect(url.toString());
+  }
+
   @Get('me')
   me(@CurrentUser() user: AuthenticatedUser) {
     return user;
@@ -340,4 +364,15 @@ function decodeJwtPayload(idToken: string): Record<string, unknown> {
     throw new UnauthorizedException('id_token invalide');
   }
   return JSON.parse(Buffer.from(parts[1], 'base64url').toString('utf8')) as Record<string, unknown>;
+}
+
+function mapBusinessErrorToReason(message: string): string {
+  if (/Aucune invitation/i.test(message)) return 'no_invitation';
+  if (/Invitation expirée/i.test(message)) return 'invitation_expired';
+  if (/Compte désactivé/i.test(message)) return 'account_disabled';
+  if (/Domaine email non autorisé/i.test(message)) return 'domain_forbidden';
+  if (/Échec échange code/i.test(message)) return 'token_exchange_failed';
+  if (/Profil .* incomplet/i.test(message)) return 'profile_incomplete';
+  if (/Email Google non vérifié/i.test(message)) return 'email_unverified';
+  return 'unexpected';
 }

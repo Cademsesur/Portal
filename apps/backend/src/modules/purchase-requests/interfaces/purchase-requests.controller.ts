@@ -4,7 +4,9 @@ import {
   Get,
   HttpCode,
   Param,
+  ParseIntPipe,
   Post,
+  Query,
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { Role } from '@sesur/shared';
@@ -16,6 +18,7 @@ import { Roles } from '../../../common/decorators/roles.decorator';
 import { DecideRequestUseCase } from '../../approvals/application/decide-request.usecase';
 import { CreatePurchaseRequestUseCase } from '../application/create-purchase-request.usecase';
 import { GetPurchaseRequestUseCase } from '../application/get-purchase-request.usecase';
+import { ListDecidedRequestsUseCase } from '../application/list-decided-requests.usecase';
 import { ListMyRequestsUseCase } from '../application/list-my-requests.usecase';
 import { ListPendingRequestsUseCase } from '../application/list-pending-requests.usecase';
 import { ApprovalActionDto } from '../dto/approval-action.dto';
@@ -28,6 +31,7 @@ export class PurchaseRequestsController {
     private readonly createRequest: CreatePurchaseRequestUseCase,
     private readonly listMyRequests: ListMyRequestsUseCase,
     private readonly listPendingRequests: ListPendingRequestsUseCase,
+    private readonly listDecidedRequests: ListDecidedRequestsUseCase,
     private readonly getRequest: GetPurchaseRequestUseCase,
     private readonly decideRequest: DecideRequestUseCase,
   ) {}
@@ -38,9 +42,18 @@ export class PurchaseRequestsController {
   }
 
   @Get('pending')
-  @Roles(Role.DAF, Role.SUPER_ADMIN)
+  @Roles(Role.DAF)
   pending() {
     return this.listPendingRequests.execute();
+  }
+
+  @Get('decided')
+  @Roles(Role.DAF)
+  decided(
+    @Query('days', new ParseIntPipe({ optional: true })) days?: number,
+  ) {
+    const span = Math.min(Math.max(days ?? 30, 1), 365);
+    return this.listDecidedRequests.execute(span);
   }
 
   @Get(':id')
@@ -61,7 +74,7 @@ export class PurchaseRequestsController {
 
   @Post(':id/decision')
   @HttpCode(200)
-  @Roles(Role.DAF, Role.SUPER_ADMIN)
+  @Roles(Role.DAF)
   decide(
     @Param('id') id: string,
     @Body() dto: ApprovalActionDto,

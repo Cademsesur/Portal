@@ -3,7 +3,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { Role } from '@sesur/shared';
 import { toPurchaseRequestDetail, type PurchaseRequestDetail } from './purchase-request.mapper';
 
-const DECISION_ROLES: Role[] = [Role.DAF, Role.MANAGER, Role.PROCUREMENT, Role.SUPER_ADMIN, Role.ADMIN];
+const DECISION_ROLES: Role[] = [Role.DAF];
 
 @Injectable()
 export class GetPurchaseRequestUseCase {

@@ -11,7 +11,7 @@ export function renderInvitationEmail({ inviteUrl }: InvitationEmailVars): {
     '',
     "Vous avez été invité à rejoindre Portal, la plateforme interne SESUR de gestion des demandes d'achat.",
     '',
-    `Pour activer votre compte, cliquez sur ce lien et connectez-vous avec votre compte Microsoft SESUR :`,
+    'Pour activer votre compte, cliquez sur ce lien et connectez-vous avec votre compte professionnel (Microsoft) ou votre compte Google :',
     inviteUrl,
     '',
     "Ce lien expire dans 7 jours.",
@@ -25,7 +25,7 @@ export function renderInvitationEmail({ inviteUrl }: InvitationEmailVars): {
   <div style="font-size: 22px; font-weight: 700; color: #243064; margin-bottom: 24px;">Portal</div>
   <p>Bonjour,</p>
   <p>Vous avez été invité à rejoindre <strong>Portal</strong>, la plateforme interne SESUR de gestion des demandes d'achat.</p>
-  <p>Pour activer votre compte, cliquez sur le bouton ci-dessous et connectez-vous avec votre compte Microsoft SESUR.</p>
+  <p>Cliquez sur le bouton ci-dessous puis connectez-vous avec votre <strong>compte professionnel Microsoft</strong> ou votre <strong>compte Google</strong> — selon ce que vous utilisez.</p>
   <p style="margin: 28px 0;">
     <a href="${inviteUrl}" style="display: inline-block; background: #243064; color: #fff; text-decoration: none; padding: 12px 22px; border-radius: 8px; font-weight: 600;">Activer mon compte</a>
   </p>
