@@ -9,20 +9,27 @@ import {
   FileSearch,
   ShieldAlert,
   XCircle,
+  type LucideIcon,
 } from 'lucide-react';
 import { useCurrentUser } from '@/features/auth/hooks/use-current-user';
-import { BRAND, canValidate } from '@/lib/brand';
+import { canValidate } from '@/lib/brand';
 import { useRequest } from '@/features/requests/hooks/use-request';
 import { useDecideRequest } from '@/features/requests/hooks/use-decide-request';
 import type {
   PurchaseRequestDetail,
-  RequestStatus,
 } from '@/features/requests/api/requests.api';
 import { PURCHASE_TYPES } from '@/features/requests/schemas/purchase-request-form.schema';
 import { StatusBadge } from '@/features/requests/components/status-badge';
 import { DecisionModal } from '@/features/requests/components/decision-modal';
 import { ApiError } from '@/lib/api-client';
 import { Forbidden } from '@/components/forbidden';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { toast } from '@/components/ui/toaster';
+import { cn } from '@/lib/utils';
+
+type TimelineState = 'done' | 'current' | 'upcoming';
 
 export default function RequestDetailPage({
   params,
@@ -51,32 +58,30 @@ export default function RequestDetailPage({
 
   if (!request) {
     return (
-      <div className="mx-auto max-w-lg rounded-xl border border-slate-200 bg-white p-10 text-center">
-        <span
-          className="mx-auto flex h-12 w-12 items-center justify-center rounded-full"
-          style={{ backgroundColor: '#EEF0F8', color: BRAND }}
-        >
+      <Card className="mx-auto max-w-lg p-10 text-center animate-fade-in-up">
+        <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary-soft text-primary-soft-foreground">
           <FileSearch className="h-6 w-6" />
         </span>
-        <h1 className="mt-4 text-lg font-semibold" style={{ color: BRAND }}>
+        <h1 className="mt-4 text-lg font-semibold text-foreground">
           Demande introuvable
         </h1>
-        <p className="mt-2 text-sm text-slate-500">
-          Cette demande n'existe pas ou a été supprimée.
+        <p className="mt-2 text-sm text-muted-foreground">
+          Cette demande n&apos;existe pas ou a été supprimée.
         </p>
-        <Link
-          href="/requests"
-          className="mt-4 inline-flex items-center gap-1.5 text-xs font-medium hover:underline"
-          style={{ color: BRAND }}
-        >
-          <ArrowLeft className="h-3.5 w-3.5" />
-          Retour aux demandes
-        </Link>
-      </div>
+        <Button asChild variant="link" className="mt-4">
+          <Link href="/requests">
+            <ArrowLeft />
+            Retour aux demandes
+          </Link>
+        </Button>
+      </Card>
     );
   }
 
-  const canDecide = canValidate(user.role) && request.status !== 'APPROVED' && request.status !== 'REJECTED';
+  const canDecide =
+    canValidate(user.role) &&
+    request.status !== 'APPROVED' &&
+    request.status !== 'REJECTED';
   const backHref = canValidate(user.role) ? '/approvals' : '/requests';
 
   const confirmDecision = (comment: string | undefined) => {
@@ -84,16 +89,29 @@ export default function RequestDetailPage({
     decideMutation.mutate(
       { decision: pendingDecision, comment },
       {
-        onSuccess: () => setPendingDecision(null),
+        onSuccess: () => {
+          toast.success(
+            pendingDecision === 'APPROVED' ? 'Demande approuvée' : 'Demande rejetée',
+            {
+              description: `${request.reference} — le demandeur a été notifié.`,
+            },
+          );
+          setPendingDecision(null);
+        },
+        onError: (err) => {
+          toast.error(
+            err instanceof ApiError ? err.message : 'Échec de la décision',
+          );
+        },
       },
     );
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-fade-in-up">
       <Link
         href={backHref}
-        className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-500 hover:text-slate-800"
+        className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
       >
         <ArrowLeft className="h-3.5 w-3.5" />
         Retour
@@ -101,16 +119,13 @@ export default function RequestDetailPage({
 
       <header className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-slate-400">
+          <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
             Demande {request.reference}
           </p>
-          <h1
-            className="mt-1 text-2xl font-semibold tracking-tight"
-            style={{ color: BRAND }}
-          >
-            Fiche de demande d'achat
+          <h1 className="mt-1 text-2xl font-semibold tracking-tight text-foreground">
+            Fiche de demande d&apos;achat
           </h1>
-          <p className="mt-1 text-sm text-slate-500">
+          <p className="mt-1 text-sm text-muted-foreground">
             Soumise par {request.requesterName} le{' '}
             {new Date(request.createdAt).toLocaleDateString('fr-FR')}
           </p>
@@ -118,55 +133,47 @@ export default function RequestDetailPage({
         <div className="flex flex-col items-start gap-2 sm:items-end">
           <StatusBadge status={request.status} />
           {request.decidedAt && (
-            <span className="text-[11px] text-slate-400">
-              Décision le{' '}
-              {new Date(request.decidedAt).toLocaleDateString('fr-FR')}
+            <span className="text-[11px] text-muted-foreground">
+              Décision le {new Date(request.decidedAt).toLocaleDateString('fr-FR')}
             </span>
           )}
         </div>
       </header>
 
       {canDecide && (
-        <div
-          className="flex flex-col gap-3 rounded-xl border bg-white p-4 sm:flex-row sm:items-center sm:justify-between"
-          style={{ borderColor: '#EEF0F8' }}
-        >
-          <div className="flex items-start gap-3">
-            <span
-              className="flex h-9 w-9 items-center justify-center rounded-lg"
-              style={{ backgroundColor: '#EEF0F8', color: BRAND }}
-            >
-              <ShieldAlert className="h-4 w-4" />
-            </span>
-            <div>
-              <p className="text-sm font-medium text-slate-800">
-                Décision DAF en attente
-              </p>
-              <p className="text-xs text-slate-500">
-                Approuvez ou rejetez cette demande. Le demandeur en sera notifié.
-              </p>
+        <Card className="border-primary/20 bg-primary-soft/50 p-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-start gap-3">
+              <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+                <ShieldAlert className="h-4 w-4" />
+              </span>
+              <div>
+                <p className="text-sm font-medium text-foreground">
+                  Décision DAF en attente
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Approuvez ou rejetez cette demande. Le demandeur en sera notifié.
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <Button
+                variant="destructive-outline"
+                onClick={() => setPendingDecision('REJECTED')}
+              >
+                <XCircle />
+                Rejeter
+              </Button>
+              <Button
+                variant="success"
+                onClick={() => setPendingDecision('APPROVED')}
+              >
+                <CheckCircle2 />
+                Approuver
+              </Button>
             </div>
           </div>
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={() => setPendingDecision('REJECTED')}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-rose-200 px-4 py-2 text-sm font-medium text-rose-600 transition hover:border-rose-300 hover:bg-rose-50"
-            >
-              <XCircle className="h-4 w-4" />
-              Rejeter
-            </button>
-            <button
-              type="button"
-              onClick={() => setPendingDecision('APPROVED')}
-              className="inline-flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90"
-              style={{ backgroundColor: '#047857' }}
-            >
-              <CheckCircle2 className="h-4 w-4" />
-              Approuver
-            </button>
-          </div>
-        </div>
+        </Card>
       )}
 
       {pendingDecision && (
@@ -182,14 +189,21 @@ export default function RequestDetailPage({
       )}
 
       <Timeline request={request} />
-
       <RequestSheet request={request} />
     </div>
   );
 }
 
 function Timeline({ request }: { request: PurchaseRequestDetail }) {
-  const steps: Array<{ label: string; date: string | null; state: 'done' | 'current' | 'upcoming' }> = [
+  const isRejected = request.status === 'REJECTED';
+  const isDecided = request.status === 'APPROVED' || isRejected;
+
+  const steps: Array<{
+    label: string;
+    date: string | null;
+    state: TimelineState;
+    failure?: boolean;
+  }> = [
     {
       label: 'Soumission',
       date: request.createdAt,
@@ -199,72 +213,51 @@ function Timeline({ request }: { request: PurchaseRequestDetail }) {
       label: 'Revue DAF',
       date: request.status === 'UNDER_REVIEW' ? request.updatedAt : null,
       state:
-        request.status === 'SUBMITTED'
+        request.status === 'SUBMITTED' || request.status === 'UNDER_REVIEW'
           ? 'current'
-          : request.status === 'UNDER_REVIEW'
-            ? 'current'
-            : 'done',
+          : 'done',
     },
     {
-      label:
-        request.status === 'REJECTED'
-          ? 'Rejetée'
-          : request.status === 'APPROVED'
-            ? 'Approuvée'
-            : 'Décision',
+      label: isRejected ? 'Rejetée' : request.status === 'APPROVED' ? 'Approuvée' : 'Décision',
       date: request.decidedAt ?? null,
-      state:
-        request.status === 'APPROVED' || request.status === 'REJECTED'
-          ? 'done'
-          : 'upcoming',
+      state: isDecided ? 'done' : 'upcoming',
+      failure: isRejected,
     },
   ];
 
   return (
-    <ol className="grid gap-2 rounded-xl border border-slate-200 bg-white p-4 sm:grid-cols-3">
-      {steps.map((s, idx) => {
-        const color =
+    <Card className="grid gap-2 p-4 sm:grid-cols-3">
+      {steps.map((s) => {
+        const Icon: LucideIcon =
           s.state === 'done'
-            ? request.status === 'REJECTED' && idx === 2
-              ? '#B91C1C'
-              : BRAND
-            : s.state === 'current'
-              ? BRAND
-              : '#94A3B8';
-        const Icon =
-          s.state === 'done'
-            ? request.status === 'REJECTED' && idx === 2
+            ? s.failure
               ? XCircle
               : CheckCircle2
             : Clock;
+        const dot = cn(
+          'flex h-8 w-8 shrink-0 items-center justify-center rounded-full',
+          s.state === 'done' && !s.failure && 'bg-primary-soft text-primary',
+          s.state === 'done' && s.failure && 'bg-destructive-soft text-destructive',
+          s.state === 'current' && 'bg-warning-soft text-warning-soft-foreground',
+          s.state === 'upcoming' && 'bg-muted text-muted-foreground',
+        );
         return (
-          <li key={s.label} className="flex items-center gap-3">
-            <span
-              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full"
-              style={{
-                backgroundColor:
-                  s.state === 'done'
-                    ? request.status === 'REJECTED' && idx === 2
-                      ? '#FEE2E2'
-                      : '#EEF0F8'
-                    : s.state === 'current'
-                      ? '#EEF0F8'
-                      : '#F1F5F9',
-                color,
-              }}
-            >
+          <li key={s.label} className="flex items-center gap-3 list-none">
+            <span className={dot}>
               <Icon className="h-4 w-4" />
             </span>
             <div>
-              <div className="text-xs font-semibold text-slate-700">{s.label}</div>
-              <div className="text-[11px] text-slate-500">
+              <div className="text-xs font-semibold text-foreground">
+                {s.label}
+              </div>
+              <div className="text-[11px] text-muted-foreground">
                 {s.date ? new Date(s.date).toLocaleString('fr-FR') : '—'}
               </div>
             </div>
           </li>
         );
       })}
-    </ol>
+    </Card>
   );
 }
 
@@ -274,18 +267,15 @@ function RequestSheet({ request }: { request: PurchaseRequestDetail }) {
   );
 
   return (
-    <article className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
-      <header
-        className="px-6 py-5"
-        style={{ background: `linear-gradient(135deg, ${BRAND} 0%, #1A2350 100%)` }}
-      >
-        <div className="flex items-center justify-between text-white">
+    <article className="overflow-hidden rounded-2xl border border-border bg-card">
+      <header className="bg-gradient-to-br from-primary-700 via-primary-800 to-primary-950 px-6 py-5 text-primary-foreground">
+        <div className="flex items-center justify-between">
           <div>
             <p className="text-[10px] uppercase tracking-[0.18em] text-white/70">
-              Société d'État SESUR
+              Société d&apos;État SESUR
             </p>
             <h2 className="mt-1 text-lg font-semibold tracking-tight">
-              Fiche de demande d'achat
+              Fiche de demande d&apos;achat
             </h2>
           </div>
           <div className="text-right text-[11px] text-white/80">
@@ -315,26 +305,17 @@ function RequestSheet({ request }: { request: PurchaseRequestDetail }) {
 
         <SheetSection index={2} title="Objet de la demande">
           <div>
-            <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">
-              Type d'achat
+            <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+              Type d&apos;achat
             </div>
             <div className="mt-2 flex flex-wrap gap-1.5">
               {selectedTypes.map((t) => (
-                <span
-                  key={t.key}
-                  className="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium"
-                  style={{ backgroundColor: '#EEF0F8', color: BRAND }}
-                >
+                <Badge key={t.key} variant="default">
                   {t.label}
-                </span>
+                </Badge>
               ))}
               {request.otherTypeDetail && (
-                <span
-                  className="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium"
-                  style={{ backgroundColor: '#EEF0F8', color: BRAND }}
-                >
-                  Autre : {request.otherTypeDetail}
-                </span>
+                <Badge variant="default">Autre : {request.otherTypeDetail}</Badge>
               )}
             </div>
           </div>
@@ -354,18 +335,14 @@ function RequestSheet({ request }: { request: PurchaseRequestDetail }) {
             multiline
             className="mt-4"
           />
-          <SheetField
-            label="Utilisateur final"
-            value={request.endUser}
-            className="mt-4"
-          />
+          <SheetField label="Utilisateur final" value={request.endUser} className="mt-4" />
         </SheetSection>
 
         <SheetSection index={4} title="Détail des articles">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="text-left text-[10px] font-semibold uppercase tracking-wider text-slate-500">
+                <tr className="text-left text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
                   <th className="pb-2 pr-3">#</th>
                   <th className="pb-2 pr-3">Description</th>
                   <th className="pb-2 pr-3">Qté</th>
@@ -374,23 +351,21 @@ function RequestSheet({ request }: { request: PurchaseRequestDetail }) {
                   <th className="pb-2">Observations</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-border">
                 {request.items.map((item, idx) => (
-                  <tr key={idx} className="text-sm text-slate-700">
-                    <td className="py-2 pr-3 font-mono text-xs text-slate-400">
+                  <tr key={idx} className="text-sm text-foreground">
+                    <td className="py-2 pr-3 font-mono text-xs text-muted-foreground">
                       {(idx + 1).toString().padStart(2, '0')}
                     </td>
-                    <td className="py-2 pr-3 font-medium text-slate-800">
-                      {item.description}
-                    </td>
+                    <td className="py-2 pr-3 font-medium">{item.description}</td>
                     <td className="py-2 pr-3">{item.quantity}</td>
-                    <td className="py-2 pr-3 text-slate-600">
+                    <td className="py-2 pr-3 text-muted-foreground">
                       {item.specifications || '—'}
                     </td>
-                    <td className="py-2 pr-3 text-slate-600">
+                    <td className="py-2 pr-3 text-muted-foreground">
                       {item.desiredDeadline || '—'}
                     </td>
-                    <td className="py-2 text-slate-600">
+                    <td className="py-2 text-muted-foreground">
                       {item.observations || '—'}
                     </td>
                   </tr>
@@ -402,15 +377,17 @@ function RequestSheet({ request }: { request: PurchaseRequestDetail }) {
 
         {request.decisionComment && (
           <div
-            className="rounded-lg border-l-4 bg-slate-50 px-4 py-3"
-            style={{
-              borderColor: request.status === 'APPROVED' ? '#047857' : '#B91C1C',
-            }}
+            className={cn(
+              'rounded-lg border-l-4 bg-muted/40 px-4 py-3',
+              request.status === 'APPROVED'
+                ? 'border-success'
+                : 'border-destructive',
+            )}
           >
-            <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">
+            <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
               Commentaire de la DAF
             </div>
-            <p className="mt-1 text-sm text-slate-700">{request.decisionComment}</p>
+            <p className="mt-1 text-sm text-foreground">{request.decisionComment}</p>
           </div>
         )}
       </div>
@@ -429,14 +406,11 @@ function SheetSection({
 }) {
   return (
     <section>
-      <header className="flex items-center gap-3 border-b border-slate-100 pb-3">
-        <span
-          className="flex h-6 w-6 items-center justify-center rounded-full text-xs font-semibold"
-          style={{ backgroundColor: '#EEF0F8', color: BRAND }}
-        >
+      <header className="flex items-center gap-3 border-b border-border pb-3">
+        <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary-soft text-xs font-semibold text-primary-soft-foreground">
           {index}
         </span>
-        <h3 className="text-sm font-semibold text-slate-800">{title}</h3>
+        <h3 className="text-sm font-semibold text-foreground">{title}</h3>
       </header>
       <div className="pt-4">{children}</div>
     </section>
@@ -460,11 +434,14 @@ function SheetField({
 }) {
   return (
     <div className={className}>
-      <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+      <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
         {label}
       </div>
       <div
-        className={`mt-1 text-sm text-slate-800 ${multiline ? 'whitespace-pre-wrap leading-relaxed' : ''}`}
+        className={cn(
+          'mt-1 text-sm text-foreground',
+          multiline && 'whitespace-pre-wrap leading-relaxed',
+        )}
       >
         {value}
       </div>

@@ -1,6 +1,7 @@
 'use client';
 
-import { forwardRef, useEffect } from 'react';
+import * as React from 'react';
+import { useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useFieldArray, useForm } from 'react-hook-form';
@@ -14,7 +15,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { useCurrentUser } from '@/features/auth/hooks/use-current-user';
-import { BRAND, isEmployeeLike, ROLE_LABELS, type Role } from '@/lib/brand';
+import { isEmployeeLike, ROLE_LABELS, type Role } from '@/lib/brand';
 import { Forbidden } from '@/components/forbidden';
 import {
   EMPTY_ITEM,
@@ -24,6 +25,14 @@ import {
 } from '@/features/requests/schemas/purchase-request-form.schema';
 import { useCreateRequest } from '@/features/requests/hooks/use-create-request';
 import type { CreatePurchaseRequestDto } from '@sesur/shared';
+import { ApiError } from '@/lib/api-client';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { toast } from '@/components/ui/toaster';
+import { cn } from '@/lib/utils';
 
 export default function NewRequestPage() {
   const router = useRouter();
@@ -54,7 +63,6 @@ export default function NewRequestPage() {
     },
   });
 
-  // Pré-remplissage depuis l'utilisateur courant
   useEffect(() => {
     if (user) {
       setValue('requesterName', user.displayName);
@@ -77,18 +85,31 @@ export default function NewRequestPage() {
   }
 
   const onSubmit = handleSubmit(async (values) => {
-    const created = await createMutation.mutateAsync(values as CreatePurchaseRequestDto);
-    router.push(`/requests/${created.id}` as never);
+    try {
+      const created = await createMutation.mutateAsync(
+        values as CreatePurchaseRequestDto,
+      );
+      toast.success('Demande soumise', {
+        description: `Référence ${created.reference} — la DAF a été notifiée.`,
+      });
+      router.push(`/requests/${created.id}` as never);
+    } catch (err) {
+      toast.error(
+        err instanceof ApiError
+          ? err.message
+          : 'Erreur lors de la soumission de la demande',
+      );
+    }
   });
 
   const today = new Date();
   const formattedDate = today.toLocaleDateString('fr-FR');
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-fade-in-up">
       <Link
         href="/requests"
-        className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-500 hover:text-slate-800"
+        className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
       >
         <ArrowLeft className="h-3.5 w-3.5" />
         Retour aux demandes
@@ -96,79 +117,55 @@ export default function NewRequestPage() {
 
       <header className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-slate-400">
+          <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
             Fiche numérique
           </p>
-          <h1
-            className="mt-1 text-2xl font-semibold tracking-tight"
-            style={{ color: BRAND }}
-          >
-            Fiche de demande d'achat
+          <h1 className="mt-1 text-2xl font-semibold tracking-tight text-foreground">
+            Fiche de demande d&apos;achat
           </h1>
-          <p className="mt-1 text-sm text-slate-500">
+          <p className="mt-1 text-sm text-muted-foreground">
             Remplissez le formulaire — il sera transmis à la DAF pour validation.
           </p>
         </div>
-        <div className="rounded-lg border border-slate-200 bg-white px-4 py-3 text-xs">
+        <Card className="px-4 py-3 text-xs">
           <div className="flex items-center gap-6">
             <div>
-              <div className="text-[10px] uppercase tracking-wider text-slate-400">
+              <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
                 Référence
               </div>
-              <div className="font-mono text-slate-600">automatique</div>
+              <div className="font-mono text-muted-foreground">automatique</div>
             </div>
             <div>
-              <div className="text-[10px] uppercase tracking-wider text-slate-400">
+              <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
                 Date
               </div>
-              <div className="font-medium text-slate-700">{formattedDate}</div>
+              <div className="font-medium text-foreground">{formattedDate}</div>
             </div>
           </div>
-        </div>
+        </Card>
       </header>
 
       <form onSubmit={onSubmit} className="space-y-6">
-        {/* 1. Identification du demandeur */}
-        <Section
-          index={1}
-          title="Identification du demandeur"
-          subtitle="Vos coordonnées professionnelles"
-        >
-          <Grid>
-            <Field label="Nom et prénom" error={errors.requesterName?.message} required>
-              <Input {...register('requesterName')} placeholder="Ex. Jean DUPONT" />
-            </Field>
-            <Field
-              label="Service / Département"
-              error={errors.department?.message}
-              required
-            >
-              <Input {...register('department')} placeholder="Ex. Informatique" />
-            </Field>
-            <Field label="Fonction" error={errors.jobTitle?.message} required>
-              <Input {...register('jobTitle')} placeholder="Ex. Développeur" />
-            </Field>
-            <Field
-              label="Responsable hiérarchique"
-              error={errors.lineManager?.message}
-              required
-            >
-              <Input
-                {...register('lineManager')}
-                placeholder="Nom et prénom du N+1"
-              />
-            </Field>
-          </Grid>
+        <Section index={1} title="Identification du demandeur" subtitle="Vos coordonnées professionnelles">
+          <FormGrid>
+            <FormField label="Nom et prénom" error={errors.requesterName?.message} required>
+              <Input {...register('requesterName')} placeholder="Ex. Jean DUPONT" invalid={!!errors.requesterName} />
+            </FormField>
+            <FormField label="Service / Département" error={errors.department?.message} required>
+              <Input {...register('department')} placeholder="Ex. Informatique" invalid={!!errors.department} />
+            </FormField>
+            <FormField label="Fonction" error={errors.jobTitle?.message} required>
+              <Input {...register('jobTitle')} placeholder="Ex. Développeur" invalid={!!errors.jobTitle} />
+            </FormField>
+            <FormField label="Responsable hiérarchique" error={errors.lineManager?.message} required>
+              <Input {...register('lineManager')} placeholder="Nom et prénom du N+1" invalid={!!errors.lineManager} />
+            </FormField>
+          </FormGrid>
         </Section>
 
-        {/* 2. Objet de la demande */}
-        <Section
-          index={2}
-          title="Objet de la demande"
-          subtitle="Type d'achat et description"
-        >
+        <Section index={2} title="Objet de la demande" subtitle="Type d'achat et description">
           <div>
-            <Label required>Type d'achat (plusieurs choix possibles)</Label>
+            <Label required>Type d&apos;achat (plusieurs choix possibles)</Label>
             <div className="mt-2 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
               {PURCHASE_TYPES.map((t) => (
                 <CheckboxOption
@@ -180,14 +177,14 @@ export default function NewRequestPage() {
               ))}
             </div>
             {errors.purchaseTypes && (
-              <p className="mt-2 text-xs text-rose-600">
+              <p className="mt-2 text-xs text-destructive">
                 {errors.purchaseTypes.message as string}
               </p>
             )}
           </div>
 
           {showOtherDetail && (
-            <Field
+            <FormField
               label="Préciser (autre)"
               error={errors.otherTypeDetail?.message}
               className="mt-4"
@@ -196,11 +193,12 @@ export default function NewRequestPage() {
               <Input
                 {...register('otherTypeDetail')}
                 placeholder="Précisez la nature de l'achat"
+                invalid={!!errors.otherTypeDetail}
               />
-            </Field>
+            </FormField>
           )}
 
-          <Field
+          <FormField
             label="Description précise (caractéristiques techniques obligatoires)"
             error={errors.description?.message}
             className="mt-4"
@@ -210,28 +208,21 @@ export default function NewRequestPage() {
               {...register('description')}
               rows={4}
               placeholder="Décrivez précisément ce qui est demandé, modèle, marque, version, caractéristiques techniques détaillées…"
+              invalid={!!errors.description}
             />
-          </Field>
+          </FormField>
         </Section>
 
-        {/* 3. Justification & impact */}
-        <Section
-          index={3}
-          title="Justification & impact"
-          subtitle="Pourquoi cet achat est-il nécessaire ?"
-        >
-          <Field
-            label="Objectif de l'achat"
-            error={errors.objective?.message}
-            required
-          >
+        <Section index={3} title="Justification & impact" subtitle="Pourquoi cet achat est-il nécessaire ?">
+          <FormField label="Objectif de l'achat" error={errors.objective?.message} required>
             <Textarea
               {...register('objective')}
               rows={3}
               placeholder="Quel besoin résout cet achat ?"
+              invalid={!!errors.objective}
             />
-          </Field>
-          <Field
+          </FormField>
+          <FormField
             label="Impact opérationnel"
             error={errors.operationalImpact?.message}
             className="mt-4"
@@ -241,41 +232,38 @@ export default function NewRequestPage() {
               {...register('operationalImpact')}
               rows={3}
               placeholder="Quel impact sur les activités si l'achat est refusé / approuvé ?"
+              invalid={!!errors.operationalImpact}
             />
-          </Field>
-          <Field
-            label="Utilisateur (final)"
-            error={errors.endUser?.message}
-            className="mt-4"
-            required
-          >
+          </FormField>
+          <FormField label="Utilisateur (final)" error={errors.endUser?.message} className="mt-4" required>
             <Input
               {...register('endUser')}
               placeholder="Personne ou équipe qui utilisera"
+              invalid={!!errors.endUser}
             />
-          </Field>
+          </FormField>
         </Section>
 
-        {/* 4. Tableau des articles */}
         <Section
           index={4}
           title="Détail des articles"
           subtitle="Une ligne par article à acheter"
           action={
-            <button
+            <Button
               type="button"
+              variant="outline"
+              size="sm"
               onClick={() => append(EMPTY_ITEM)}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:border-slate-300 hover:text-slate-900"
             >
-              <Plus className="h-3.5 w-3.5" />
+              <Plus />
               Ajouter une ligne
-            </button>
+            </Button>
           }
         >
           <div className="overflow-x-auto">
             <table className="w-full border-separate border-spacing-y-2 text-sm">
               <thead>
-                <tr className="text-left text-[11px] font-medium uppercase tracking-wider text-slate-500">
+                <tr className="text-left text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
                   <th className="w-10 pl-2">#</th>
                   <th className="px-2">Description</th>
                   <th className="w-24 px-2">Qté</th>
@@ -288,16 +276,17 @@ export default function NewRequestPage() {
               <tbody>
                 {fields.map((field, idx) => (
                   <tr key={field.id} className="align-top">
-                    <td className="pl-2 pt-2 text-xs font-mono text-slate-400">
+                    <td className="pl-2 pt-2 font-mono text-xs text-muted-foreground">
                       {(idx + 1).toString().padStart(2, '0')}
                     </td>
                     <td className="px-1">
                       <Input
                         {...register(`items.${idx}.description` as const)}
                         placeholder="Désignation"
+                        invalid={!!errors.items?.[idx]?.description}
                       />
                       {errors.items?.[idx]?.description && (
-                        <p className="mt-1 text-xs text-rose-600">
+                        <p className="mt-1 text-xs text-destructive">
                           {errors.items[idx]?.description?.message}
                         </p>
                       )}
@@ -307,9 +296,10 @@ export default function NewRequestPage() {
                         type="number"
                         min={1}
                         {...register(`items.${idx}.quantity` as const, { valueAsNumber: true })}
+                        invalid={!!errors.items?.[idx]?.quantity}
                       />
                       {errors.items?.[idx]?.quantity && (
-                        <p className="mt-1 text-xs text-rose-600">
+                        <p className="mt-1 text-xs text-destructive">
                           {errors.items[idx]?.quantity?.message}
                         </p>
                       )}
@@ -332,12 +322,12 @@ export default function NewRequestPage() {
                         placeholder="Notes éventuelles"
                       />
                     </td>
-                    <td className="pt-1.5 text-right">
+                    <td className="pt-2 text-right">
                       <button
                         type="button"
                         onClick={() => fields.length > 1 && remove(idx)}
                         disabled={fields.length === 1}
-                        className="rounded-md p-1.5 text-slate-400 transition hover:bg-rose-50 hover:text-rose-600 disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-slate-400"
+                        className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-destructive-soft hover:text-destructive disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-muted-foreground"
                         aria-label="Supprimer la ligne"
                       >
                         <Trash2 className="h-3.5 w-3.5" />
@@ -349,11 +339,10 @@ export default function NewRequestPage() {
             </table>
           </div>
           {typeof errors.items?.message === 'string' && (
-            <p className="mt-2 text-xs text-rose-600">{errors.items.message}</p>
+            <p className="mt-2 text-xs text-destructive">{errors.items.message}</p>
           )}
         </Section>
 
-        {/* Signatures + submit */}
         <div className="grid gap-4 sm:grid-cols-2">
           <SignatureBlock
             label="Demandeur"
@@ -364,36 +353,28 @@ export default function NewRequestPage() {
           <SignatureBlock label="Approbateur (DAF)" name="—" role="DAF" state="pending" />
         </div>
 
-        <div className="sticky bottom-4 z-10 flex flex-col items-stretch gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-xs text-slate-500">
+        <Card className="sticky bottom-4 z-10 flex flex-col items-stretch gap-3 p-4 shadow-md sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-xs text-muted-foreground">
             En soumettant, la fiche est transmise à la DAF pour arbitrage. Vous
             pourrez en suivre le statut depuis « Mes demandes ».
           </p>
           <div className="flex items-center gap-2">
-            <Link
-              href="/requests"
-              className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 transition hover:border-slate-300 hover:text-slate-900"
-            >
-              Annuler
-            </Link>
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-50"
-              style={{ backgroundColor: BRAND }}
-            >
-              <Send className="h-4 w-4" />
-              {isSubmitting ? 'Envoi…' : 'Soumettre à la DAF'}
-            </button>
+            <Button asChild variant="outline">
+              <Link href="/requests">Annuler</Link>
+            </Button>
+            <Button type="submit" loading={isSubmitting}>
+              {!isSubmitting && <Send />}
+              Soumettre à la DAF
+            </Button>
           </div>
-        </div>
+        </Card>
       </form>
     </div>
   );
 }
 
 // ─────────────────────────────────────────────────────────────
-// Form primitives
+// Form pieces specific to this page
 // ─────────────────────────────────────────────────────────────
 
 function Section({
@@ -410,34 +391,29 @@ function Section({
   action?: React.ReactNode;
 }) {
   return (
-    <section className="rounded-xl border border-slate-200 bg-white">
-      <header className="flex items-center justify-between border-b border-slate-100 px-6 py-4">
+    <Card>
+      <header className="flex items-center justify-between border-b border-border px-6 py-4">
         <div className="flex items-center gap-3">
-          <span
-            className="flex h-7 w-7 items-center justify-center rounded-full text-xs font-semibold"
-            style={{ backgroundColor: '#EEF0F8', color: BRAND }}
-          >
+          <span className="flex h-7 w-7 items-center justify-center rounded-full bg-primary-soft text-xs font-semibold text-primary-soft-foreground">
             {index}
           </span>
           <div>
-            <h2 className="text-sm font-semibold text-slate-800">{title}</h2>
-            {subtitle && (
-              <p className="text-xs text-slate-500">{subtitle}</p>
-            )}
+            <h2 className="text-sm font-semibold text-foreground">{title}</h2>
+            {subtitle && <p className="text-xs text-muted-foreground">{subtitle}</p>}
           </div>
         </div>
         {action}
       </header>
       <div className="px-6 py-5">{children}</div>
-    </section>
+    </Card>
   );
 }
 
-function Grid({ children }: { children: React.ReactNode }) {
+function FormGrid({ children }: { children: React.ReactNode }) {
   return <div className="grid gap-4 sm:grid-cols-2">{children}</div>;
 }
 
-function Field({
+function FormField({
   label,
   error,
   required,
@@ -454,60 +430,25 @@ function Field({
     <div className={className}>
       <Label required={required}>{label}</Label>
       <div className="mt-1.5">{children}</div>
-      {error && <p className="mt-1 text-xs text-rose-600">{error}</p>}
+      {error && <p className="mt-1 text-xs text-destructive">{error}</p>}
     </div>
   );
 }
 
-function Label({
-  children,
-  required,
-}: {
-  children: React.ReactNode;
-  required?: boolean;
-}) {
-  return (
-    <label className="text-xs font-medium text-slate-700">
-      {children}
-      {required && <span className="ml-1 text-rose-500">*</span>}
-    </label>
-  );
-}
-
-const inputClass =
-  'w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 placeholder:text-slate-400 transition focus:border-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-100';
-
-const Input = forwardRef<HTMLInputElement, React.InputHTMLAttributes<HTMLInputElement>>(
-  function Input({ className, ...rest }, ref) {
-    return <input ref={ref} className={`${inputClass} ${className ?? ''}`} {...rest} />;
-  },
-);
-
-const Textarea = forwardRef<HTMLTextAreaElement, React.TextareaHTMLAttributes<HTMLTextAreaElement>>(
-  function Textarea({ className, ...rest }, ref) {
-    return (
-      <textarea
-        ref={ref}
-        className={`${inputClass} resize-y leading-relaxed ${className ?? ''}`}
-        {...rest}
-      />
-    );
-  },
-);
-
-const CheckboxOption = forwardRef<
+const CheckboxOption = React.forwardRef<
   HTMLInputElement,
   React.InputHTMLAttributes<HTMLInputElement> & { label: string }
 >(function CheckboxOption({ label, className, ...rest }, ref) {
   return (
     <label
-      className={`group flex cursor-pointer items-center gap-2.5 rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 has-[:checked]:border-transparent has-[:checked]:bg-[#EEF0F8] has-[:checked]:text-[#243064] ${className ?? ''}`}
+      className={cn(
+        'group flex cursor-pointer items-center gap-2.5 rounded-lg border border-border bg-card px-3 py-2.5 text-sm text-foreground transition-colors hover:border-foreground/15 hover:bg-muted/50 has-[:checked]:border-primary/40 has-[:checked]:bg-primary-soft has-[:checked]:text-primary-soft-foreground',
+        className,
+      )}
     >
       <input ref={ref} type="checkbox" className="sr-only" {...rest} />
-      <span
-        className="flex h-4 w-4 items-center justify-center rounded border border-slate-300 bg-white text-white transition group-has-[:checked]:border-transparent group-has-[:checked]:bg-[#243064]"
-      >
-        <Check className="h-3 w-3 opacity-0 transition group-has-[:checked]:opacity-100" />
+      <span className="flex h-4 w-4 items-center justify-center rounded border border-border bg-card text-primary-foreground transition-colors group-has-[:checked]:border-transparent group-has-[:checked]:bg-primary">
+        <Check className="h-3 w-3 opacity-0 transition-opacity group-has-[:checked]:opacity-100" />
       </span>
       <span>{label}</span>
     </label>
@@ -526,24 +467,26 @@ function SignatureBlock({
   state: 'ready' | 'pending';
 }) {
   const Icon: LucideIcon = state === 'ready' ? Check : Send;
+  const ready = state === 'ready';
   return (
-    <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50/40 px-5 py-4">
+    <div className="rounded-xl border border-dashed border-border bg-muted/30 px-5 py-4">
       <div className="flex items-center justify-between">
-        <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+        <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
           {label}
         </span>
         <span
-          className="flex h-6 w-6 items-center justify-center rounded-full"
-          style={{
-            backgroundColor: state === 'ready' ? '#ECFDF5' : '#F1F5F9',
-            color: state === 'ready' ? '#047857' : '#64748B',
-          }}
+          className={cn(
+            'flex h-6 w-6 items-center justify-center rounded-full',
+            ready
+              ? 'bg-success-soft text-success-soft-foreground'
+              : 'bg-muted text-muted-foreground',
+          )}
         >
           <Icon className="h-3 w-3" />
         </span>
       </div>
-      <div className="mt-2 text-sm font-medium text-slate-800">{name}</div>
-      <div className="text-xs text-slate-500">{role}</div>
+      <div className="mt-2 text-sm font-semibold text-foreground">{name}</div>
+      <div className="text-[11px] text-muted-foreground">{role}</div>
     </div>
   );
 }

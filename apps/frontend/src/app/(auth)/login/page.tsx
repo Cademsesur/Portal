@@ -1,9 +1,7 @@
 import Image from 'next/image';
-import { AlertTriangle } from 'lucide-react';
+import { AlertTriangle, ArrowRight } from 'lucide-react';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000/api/v1';
-
-const BRAND = '#243064';
 
 const PROVIDER_LABEL: Record<string, string> = {
   microsoft: 'Microsoft',
@@ -38,9 +36,10 @@ const REASON_MESSAGE: Record<string, string> = {
 function describeSsoError(provider?: string, reason?: string): string | null {
   if (!provider && !reason) return null;
   const providerLabel = provider ? PROVIDER_LABEL[provider] ?? provider : 'SSO';
-  const message = reason && REASON_MESSAGE[reason]
-    ? REASON_MESSAGE[reason]
-    : "Connexion impossible. Réessayez ou contactez votre administrateur.";
+  const message =
+    reason && REASON_MESSAGE[reason]
+      ? REASON_MESSAGE[reason]
+      : 'Connexion impossible. Réessayez ou contactez votre administrateur.';
   return `Échec de connexion ${providerLabel}. ${message}`;
 }
 
@@ -55,9 +54,8 @@ export default function LoginPage({
       : null;
 
   return (
-    <main className="grid min-h-screen grid-cols-1 bg-white lg:grid-cols-2">
-      {/* Left column — white, SSO-only */}
-      <section className="relative flex flex-col bg-white px-8 py-10 sm:px-14 lg:px-20 xl:px-28">
+    <main className="grid min-h-screen grid-cols-1 bg-background lg:grid-cols-2">
+      <section className="relative flex flex-col bg-background px-8 py-10 sm:px-14 lg:px-20 xl:px-28">
         <header className="flex items-center gap-3">
           <Image
             src="/logos/logo.png"
@@ -67,25 +65,19 @@ export default function LoginPage({
             priority
             className="h-12 w-auto"
           />
-          <div
-            className="text-xl font-semibold tracking-tight"
-            style={{ color: BRAND }}
-          >
+          <div className="text-xl font-semibold tracking-tight text-primary">
             SESUR
           </div>
         </header>
 
-        <div className="mx-auto flex w-full max-w-lg flex-1 flex-col justify-center py-16">
-          <p className="text-sm font-medium uppercase tracking-[0.18em] text-slate-400">
+        <div className="mx-auto flex w-full max-w-lg flex-1 flex-col justify-center py-16 animate-fade-in-up">
+          <p className="text-sm font-medium uppercase tracking-[0.18em] text-muted-foreground">
             Bienvenue
           </p>
-          <h1
-            className="mt-3 text-5xl font-bold leading-[1.05] tracking-tight"
-            style={{ color: BRAND }}
-          >
+          <h1 className="mt-3 text-5xl font-bold leading-[1.05] tracking-tight text-primary">
             Portal
           </h1>
-          <p className="mt-5 max-w-md text-base leading-relaxed text-slate-500">
+          <p className="mt-5 max-w-md text-base leading-relaxed text-muted-foreground">
             Connectez-vous avec votre compte professionnel SESUR pour accéder à
             vos demandes d&apos;achat et approbations.
           </p>
@@ -93,7 +85,7 @@ export default function LoginPage({
           {errorMessage && (
             <div
               role="alert"
-              className="mt-8 flex items-start gap-3 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700"
+              className="mt-8 flex items-start gap-3 rounded-xl border border-destructive/20 bg-destructive-soft px-4 py-3 text-sm text-destructive-soft-foreground animate-fade-in"
             >
               <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
               <span>{errorMessage}</span>
@@ -140,20 +132,19 @@ export default function LoginPage({
           </div>
 
           <div className="mt-10 flex items-center gap-3">
-            <div className="h-px flex-1 bg-slate-200" />
-            <span className="text-[11px] uppercase tracking-[0.18em] text-slate-400">
+            <div className="h-px flex-1 bg-border" />
+            <span className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
               Authentification SSO
             </span>
-            <div className="h-px flex-1 bg-slate-200" />
+            <div className="h-px flex-1 bg-border" />
           </div>
         </div>
 
-        <footer className="text-xs text-slate-400">
+        <footer className="text-xs text-muted-foreground">
           © {new Date().getFullYear()} SESUR — Accès réservé aux collaborateurs.
         </footer>
       </section>
 
-      {/* Right column — full-bleed hero image */}
       <aside className="relative hidden overflow-hidden lg:block">
         <Image
           src="/images/signi_picture_2.jpg"
@@ -165,8 +156,7 @@ export default function LoginPage({
         />
         <div
           aria-hidden
-          className="absolute inset-0"
-          style={{ backgroundColor: BRAND, opacity: 0.35, mixBlendMode: 'multiply' }}
+          className="absolute inset-0 bg-primary mix-blend-multiply opacity-40"
         />
       </aside>
     </main>
@@ -183,24 +173,11 @@ function SsoButton({ href, label, icon }: SsoButtonProps) {
   return (
     <a
       href={href}
-      className="group flex w-full items-center gap-3 rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-[13px] font-medium text-slate-600 transition hover:border-slate-300 hover:bg-slate-50/60"
+      className="group flex w-full items-center gap-3 rounded-xl border border-border bg-card px-4 py-3 text-[13px] font-medium text-foreground shadow-xs transition-all hover:-translate-y-px hover:border-foreground/15 hover:bg-muted/60 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
     >
       <span className="flex h-5 w-5 items-center justify-center">{icon}</span>
       <span className="flex-1 text-left">{label}</span>
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        className="h-3.5 w-3.5 text-slate-300 transition group-hover:translate-x-0.5 group-hover:text-slate-500"
-        aria-hidden
-      >
-        <path d="M5 12h14" />
-        <path d="M13 5l7 7-7 7" />
-      </svg>
+      <ArrowRight className="h-3.5 w-3.5 text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:text-foreground" />
     </a>
   );
 }

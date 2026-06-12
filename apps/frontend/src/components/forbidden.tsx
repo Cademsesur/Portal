@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { ArrowLeft, ShieldAlert } from 'lucide-react';
-import { BRAND } from '@/lib/brand';
+import { Button } from '@/components/ui/button';
 
 interface ForbiddenProps {
   title?: string;
@@ -18,33 +18,25 @@ export function Forbidden({
   backLabel = 'Retour au tableau de bord',
 }: ForbiddenProps) {
   return (
-    <div className="mx-auto flex max-w-lg flex-col items-center justify-center px-6 py-20 text-center">
-      <span
-        className="flex h-16 w-16 items-center justify-center rounded-full"
-        style={{ backgroundColor: '#FEE2E2', color: '#B91C1C' }}
-      >
+    <div className="mx-auto flex max-w-lg flex-col items-center justify-center px-6 py-20 text-center animate-fade-in-up">
+      <span className="flex h-16 w-16 items-center justify-center rounded-full bg-destructive-soft text-destructive-soft-foreground">
         <ShieldAlert className="h-8 w-8" />
       </span>
-      <p className="mt-6 text-[11px] font-semibold uppercase tracking-[0.18em] text-rose-600">
+      <p className="mt-6 text-[11px] font-semibold uppercase tracking-[0.18em] text-destructive">
         Erreur 403
       </p>
-      <h1
-        className="mt-2 text-2xl font-semibold tracking-tight"
-        style={{ color: BRAND }}
-      >
+      <h1 className="mt-2 text-2xl font-semibold tracking-tight text-foreground">
         {title}
       </h1>
-      <p className="mt-3 max-w-md text-sm leading-relaxed text-slate-500">
+      <p className="mt-3 max-w-md text-sm leading-relaxed text-muted-foreground">
         {message}
       </p>
-      <Link
-        href={backHref as never}
-        className="mt-8 inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold text-white transition hover:opacity-90"
-        style={{ backgroundColor: BRAND }}
-      >
-        <ArrowLeft className="h-4 w-4" />
-        {backLabel}
-      </Link>
+      <Button asChild className="mt-8">
+        <Link href={backHref as never}>
+          <ArrowLeft />
+          {backLabel}
+        </Link>
+      </Button>
     </div>
   );
 }

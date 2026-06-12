@@ -13,12 +13,8 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { useCurrentUser } from '@/features/auth/hooks/use-current-user';
-import {
-  BRAND,
-  canManageUsers,
-  canValidate,
-  isEmployeeLike,
-} from '@/lib/brand';
+import { canManageUsers, canValidate, isEmployeeLike } from '@/lib/brand';
+import { cn } from '@/lib/utils';
 
 interface NavItem {
   href: Route;
@@ -60,8 +56,8 @@ export function AppSidebar() {
   const sections = buildNav(user?.role);
 
   return (
-    <aside className="hidden w-64 shrink-0 flex-col border-r border-slate-200 bg-white lg:flex">
-      <div className="flex h-16 items-center gap-3 border-b border-slate-200 px-6">
+    <aside className="hidden w-64 shrink-0 flex-col border-r border-border bg-card lg:flex">
+      <div className="flex h-16 items-center gap-3 border-b border-border px-6">
         <Image
           src="/logos/logo.png"
           alt="SESUR"
@@ -70,12 +66,7 @@ export function AppSidebar() {
           priority
           className="h-9 w-auto"
         />
-        <span
-          className="text-sm font-semibold tracking-tight"
-          style={{ color: BRAND }}
-        >
-          FLOW
-        </span>
+        <span className="text-sm font-semibold tracking-tight text-primary">FLOW</span>
       </div>
 
       <nav className="flex-1 overflow-y-auto px-3 py-5">
@@ -96,7 +87,7 @@ export function AppSidebar() {
         />
       </nav>
 
-      <div className="border-t border-slate-200 px-6 py-4 text-[11px] text-slate-400">
+      <div className="border-t border-border px-6 py-4 text-[11px] text-muted-foreground">
         SESUR FLOW · v0.1.0
       </div>
     </aside>
@@ -116,7 +107,7 @@ function SidebarGroup({
 }) {
   return (
     <div className={className}>
-      <div className="px-3 pb-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">
+      <div className="px-3 pb-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
         {label}
       </div>
       <ul className="space-y-0.5">
@@ -126,35 +117,27 @@ function SidebarGroup({
             <li key={href}>
               <Link
                 href={href}
-                className="group relative flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition"
-                style={
+                aria-current={active ? 'page' : undefined}
+                className={cn(
+                  'group relative flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors',
                   active
-                    ? { backgroundColor: '#EEF0F8', color: BRAND }
-                    : undefined
-                }
+                    ? 'bg-primary-soft text-primary-soft-foreground'
+                    : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+                )}
               >
                 {active && (
                   <span
                     aria-hidden
-                    className="absolute left-0 top-1/2 h-5 w-0.5 -translate-y-1/2 rounded-r"
-                    style={{ backgroundColor: BRAND }}
+                    className="absolute left-0 top-1/2 h-5 w-0.5 -translate-y-1/2 rounded-r bg-primary"
                   />
                 )}
                 <Icon
-                  className="h-4 w-4"
-                  style={
-                    active ? { color: BRAND } : { color: 'rgb(100, 116, 139)' }
-                  }
+                  className={cn(
+                    'h-4 w-4 shrink-0 transition-colors',
+                    active ? 'text-primary' : 'text-muted-foreground group-hover:text-foreground',
+                  )}
                 />
-                <span
-                  className={
-                    active
-                      ? 'font-medium'
-                      : 'text-slate-600 transition group-hover:text-slate-900'
-                  }
-                >
-                  {itemLabel}
-                </span>
+                <span className={active ? 'font-medium' : ''}>{itemLabel}</span>
               </Link>
             </li>
           );

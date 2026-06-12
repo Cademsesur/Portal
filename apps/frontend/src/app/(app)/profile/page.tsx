@@ -2,10 +2,13 @@
 
 import { useRouter } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
-import { LogOut, Mail, ShieldCheck } from 'lucide-react';
+import { Calendar, LogOut, Mail, ShieldCheck } from 'lucide-react';
 import { useCurrentUser } from '@/features/auth/hooks/use-current-user';
 import { logout } from '@/features/auth/api/auth.api';
-import { BRAND, ROLE_LABELS, type Role } from '@/lib/brand';
+import { ROLE_LABELS, type Role } from '@/lib/brand';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
 
 export default function ProfilePage() {
   const { data: user } = useCurrentUser();
@@ -31,76 +34,62 @@ export default function ProfilePage() {
   };
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6">
+    <div className="mx-auto max-w-3xl space-y-6 animate-fade-in-up">
       <header>
-        <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-slate-400">
+        <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
           Mon compte
         </p>
-        <h1
-          className="mt-1 text-2xl font-semibold tracking-tight"
-          style={{ color: BRAND }}
-        >
+        <h1 className="mt-1 text-2xl font-semibold tracking-tight text-foreground">
           Profil
         </h1>
-        <p className="mt-1 text-sm text-slate-500">
+        <p className="mt-1 text-sm text-muted-foreground">
           Vos informations de compte SESUR.
         </p>
       </header>
 
-      <section
-        className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white"
-      >
-        <div
-          aria-hidden
-          className="h-24"
-          style={{
-            background: `linear-gradient(135deg, ${BRAND} 0%, #1A2350 100%)`,
-          }}
-        />
+      <Card className="relative overflow-hidden">
+        <div className="h-24 bg-gradient-to-br from-primary-700 via-primary-800 to-primary-950" />
         <div className="px-6 pb-6">
           <div className="-mt-10 flex items-end justify-between">
-            <div
-              className="flex h-20 w-20 items-center justify-center rounded-full border-4 border-white text-xl font-semibold text-white shadow-sm"
-              style={{ backgroundColor: BRAND }}
-            >
+            <div className="flex h-20 w-20 items-center justify-center rounded-full border-4 border-card bg-primary text-xl font-semibold text-primary-foreground shadow-md">
               {initials || '?'}
             </div>
-            <span
-              className="mb-1 inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider"
-              style={{ backgroundColor: '#EEF0F8', color: BRAND }}
-            >
+            <Badge variant="default" className="mb-1 uppercase tracking-wider">
               <ShieldCheck className="h-3 w-3" />
               {roleLabel}
-            </span>
+            </Badge>
           </div>
           <div className="mt-3">
-            <div className="text-lg font-semibold text-slate-900">
+            <div className="text-lg font-semibold text-foreground">
               {user.displayName}
             </div>
-            <div className="text-sm text-slate-500">{user.email}</div>
+            <div className="text-sm text-muted-foreground">{user.email}</div>
           </div>
         </div>
-      </section>
+      </Card>
 
-      <section className="rounded-2xl border border-slate-200 bg-white p-6">
-        <h2 className="text-sm font-semibold text-slate-800">
+      <Card className="p-6">
+        <h2 className="text-sm font-semibold text-foreground">
           Informations détaillées
         </h2>
         <dl className="mt-4 grid grid-cols-1 gap-x-6 gap-y-5 sm:grid-cols-2">
           <Field icon={Mail} label="Email professionnel" value={user.email} />
           <Field icon={ShieldCheck} label="Rôle" value={roleLabel} />
+          {user.lastLoginAt && (
+            <Field
+              icon={Calendar}
+              label="Dernière connexion"
+              value={new Date(user.lastLoginAt).toLocaleString('fr-FR')}
+            />
+          )}
         </dl>
-      </section>
+      </Card>
 
       <div className="flex justify-end">
-        <button
-          type="button"
-          onClick={handleLogout}
-          className="inline-flex items-center gap-2 rounded-lg border border-rose-200 px-4 py-2 text-sm font-medium text-rose-600 transition hover:border-rose-300 hover:bg-rose-50"
-        >
-          <LogOut className="h-4 w-4" />
+        <Button variant="destructive-outline" onClick={handleLogout}>
+          <LogOut />
           Se déconnecter
-        </button>
+        </Button>
       </div>
     </div>
   );
@@ -117,11 +106,11 @@ function Field({
 }) {
   return (
     <div>
-      <dt className="flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wider text-slate-500">
+      <dt className="flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
         <Icon className="h-3 w-3" />
         {label}
       </dt>
-      <dd className="mt-1.5 text-sm text-slate-800">{value}</dd>
+      <dd className="mt-1.5 text-sm text-foreground">{value}</dd>
     </div>
   );
 }

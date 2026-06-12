@@ -25,13 +25,16 @@ import type {
   RequestStatus,
 } from '@/features/requests/api/requests.api';
 import {
-  BRAND,
   ROLE_LABELS,
   canManageUsers,
   canValidate,
   isEmployeeLike,
   type Role,
 } from '@/lib/brand';
+import { Card } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
+import { cn } from '@/lib/utils';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -43,14 +46,10 @@ export default function DashboardPage() {
   const roleLabel = ROLE_LABELS[user.role as Role] ?? user.role;
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 animate-fade-in-up">
       <Hero firstName={firstName} roleLabel={roleLabel} role={user.role} />
 
-      {canValidate(user.role) ? (
-        <DafDashboard />
-      ) : (
-        <EmployeeDashboard role={user.role} />
-      )}
+      {canValidate(user.role) ? <DafDashboard /> : <EmployeeDashboard role={user.role} />}
     </div>
   );
 }
@@ -65,21 +64,22 @@ function Hero({
   role: string;
 }) {
   return (
-    <section
-      className="relative overflow-hidden rounded-2xl px-8 py-9 text-white shadow-sm"
-      style={{
-        background: `linear-gradient(135deg, ${BRAND} 0%, #1A2350 60%, #0F1838 100%)`,
-      }}
-    >
+    <section className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary-700 via-primary-800 to-primary-950 px-8 py-9 text-primary-foreground shadow-md">
       <div
         aria-hidden
         className="pointer-events-none absolute -right-16 -top-16 h-72 w-72 rounded-full"
-        style={{ background: 'radial-gradient(closest-side, rgba(126,158,255,0.35), transparent 70%)' }}
+        style={{
+          background:
+            'radial-gradient(closest-side, hsl(190 90% 60% / 0.35), transparent 70%)',
+        }}
       />
       <div
         aria-hidden
         className="pointer-events-none absolute -bottom-24 right-1/3 h-72 w-72 rounded-full"
-        style={{ background: 'radial-gradient(closest-side, rgba(255,255,255,0.08), transparent 70%)' }}
+        style={{
+          background:
+            'radial-gradient(closest-side, hsl(0 0% 100% / 0.08), transparent 70%)',
+        }}
       />
 
       <div className="relative flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
@@ -99,33 +99,32 @@ function Hero({
 
         <div className="flex flex-wrap gap-2">
           {isEmployeeLike(role) && (
-            <Link
-              href="/requests/new"
-              className="inline-flex items-center gap-2 rounded-lg bg-white px-4 py-2.5 text-sm font-semibold shadow-sm transition hover:bg-white/90"
-              style={{ color: BRAND }}
-            >
-              <PlusCircle className="h-4 w-4" />
-              Nouvelle demande
-            </Link>
+            <Button asChild variant="secondary" className="bg-white text-primary hover:bg-white/90">
+              <Link href="/requests/new">
+                <PlusCircle />
+                Nouvelle demande
+              </Link>
+            </Button>
           )}
           {canManageUsers(role) && (
-            <Link
-              href="/admin/users"
-              className="inline-flex items-center gap-2 rounded-lg border border-white/20 bg-white/10 px-4 py-2.5 text-sm font-semibold text-white backdrop-blur transition hover:bg-white/15"
+            <Button
+              asChild
+              variant="outline"
+              className="border-white/20 bg-white/10 text-white backdrop-blur hover:bg-white/15"
             >
-              <UserPlus className="h-4 w-4" />
-              Inviter un utilisateur
-            </Link>
+              <Link href="/admin/users">
+                <UserPlus />
+                Inviter un utilisateur
+              </Link>
+            </Button>
           )}
           {canValidate(role) && (
-            <Link
-              href="/approvals"
-              className="inline-flex items-center gap-2 rounded-lg bg-white px-4 py-2.5 text-sm font-semibold shadow-sm transition hover:bg-white/90"
-              style={{ color: BRAND }}
-            >
-              <ClipboardCheck className="h-4 w-4" />
-              Voir les validations
-            </Link>
+            <Button asChild variant="secondary" className="bg-white text-primary hover:bg-white/90">
+              <Link href="/approvals">
+                <ClipboardCheck />
+                Voir les validations
+              </Link>
+            </Button>
           )}
         </div>
       </div>
@@ -156,21 +155,21 @@ function EmployeeDashboard({ role }: { role: string }) {
   const cards: StatCardProps[] = [
     {
       label: 'Mes demandes en cours',
-      value: formatStat(stats.pending, isLoading),
+      value: stats.pending,
       hint: 'En attente de validation DAF',
       icon: Clock,
       tone: 'brand',
     },
     {
       label: 'Approuvées',
-      value: formatStat(stats.approved30, isLoading),
+      value: stats.approved30,
       hint: 'Cumul des 30 derniers jours',
       icon: CheckCircle2,
       tone: 'success',
     },
     {
       label: 'Rejetées',
-      value: formatStat(stats.rejected30, isLoading),
+      value: stats.rejected30,
       hint: 'À reformuler si besoin',
       icon: XCircle,
       tone: 'danger',
@@ -179,19 +178,24 @@ function EmployeeDashboard({ role }: { role: string }) {
 
   return (
     <>
-      <KpiGrid stats={cards} />
+      <KpiGrid stats={cards} isLoading={isLoading} />
 
       <div className="grid gap-6 lg:grid-cols-3">
-        <Card
+        <SectionCard
           className="lg:col-span-2"
           title="Vos dernières demandes"
           action={
-            <Link href="/requests" className="text-xs font-medium hover:underline" style={{ color: BRAND }}>
+            <Link
+              href="/requests"
+              className="text-xs font-medium text-primary hover:underline"
+            >
               Tout voir →
             </Link>
           }
         >
-          {recent.length === 0 ? (
+          {isLoading ? (
+            <RequestListSkeleton />
+          ) : recent.length === 0 ? (
             <EmptyState
               icon={FileText}
               title="Aucune demande pour le moment"
@@ -201,9 +205,9 @@ function EmployeeDashboard({ role }: { role: string }) {
           ) : (
             <RecentRequestList rows={recent} />
           )}
-        </Card>
+        </SectionCard>
 
-        <Card title="Actions rapides">
+        <SectionCard title="Actions rapides">
           <div className="space-y-2">
             <QuickAction
               href="/requests/new"
@@ -226,7 +230,7 @@ function EmployeeDashboard({ role }: { role: string }) {
               />
             )}
           </div>
-        </Card>
+        </SectionCard>
       </div>
     </>
   );
@@ -257,21 +261,21 @@ function DafDashboard() {
   const cards: StatCardProps[] = [
     {
       label: 'À valider',
-      value: formatStat(stats.pending, pendingLoading),
+      value: stats.pending,
       hint: 'En attente de votre décision',
       icon: ClipboardCheck,
       tone: 'brand',
     },
     {
       label: 'Approuvées ce mois',
-      value: formatStat(stats.approvedMonth, decidedLoading),
+      value: stats.approvedMonth,
       hint: 'Toutes demandes confondues',
       icon: CheckCircle2,
       tone: 'success',
     },
     {
       label: 'Rejetées ce mois',
-      value: formatStat(stats.rejectedMonth, decidedLoading),
+      value: stats.rejectedMonth,
       hint: 'Motifs disponibles dans le détail',
       icon: XCircle,
       tone: 'danger',
@@ -280,19 +284,24 @@ function DafDashboard() {
 
   return (
     <>
-      <KpiGrid stats={cards} />
+      <KpiGrid stats={cards} isLoading={pendingLoading || decidedLoading} />
 
       <div className="grid gap-6 lg:grid-cols-3">
-        <Card
+        <SectionCard
           className="lg:col-span-2"
           title="File d'arbitrage"
           action={
-            <Link href="/approvals" className="text-xs font-medium hover:underline" style={{ color: BRAND }}>
+            <Link
+              href="/approvals"
+              className="text-xs font-medium text-primary hover:underline"
+            >
               Ouvrir la file →
             </Link>
           }
         >
-          {queue.length === 0 ? (
+          {pendingLoading ? (
+            <RequestListSkeleton />
+          ) : queue.length === 0 ? (
             <EmptyState
               icon={ClipboardCheck}
               title="Aucune demande en attente"
@@ -301,10 +310,12 @@ function DafDashboard() {
           ) : (
             <RecentRequestList rows={queue} />
           )}
-        </Card>
+        </SectionCard>
 
-        <Card title="Activité récente">
-          {recentDecisions.length === 0 ? (
+        <SectionCard title="Activité récente">
+          {decidedLoading ? (
+            <RequestListSkeleton compact />
+          ) : recentDecisions.length === 0 ? (
             <EmptyState
               icon={ShieldCheck}
               title="Pas encore d'activité"
@@ -314,7 +325,7 @@ function DafDashboard() {
           ) : (
             <RecentRequestList rows={recentDecisions} dense />
           )}
-        </Card>
+        </SectionCard>
       </div>
     </>
   );
@@ -324,11 +335,6 @@ function DafDashboard() {
 // UI primitives
 // ─────────────────────────────────────────────────────────────
 
-function formatStat(value: number, isLoading: boolean): string {
-  if (isLoading) return '…';
-  return String(value);
-}
-
 function isAfter(iso: string | null, sinceMs: number): boolean {
   if (!iso) return false;
   return new Date(iso).getTime() >= sinceMs;
@@ -336,53 +342,71 @@ function isAfter(iso: string | null, sinceMs: number): boolean {
 
 interface StatCardProps {
   label: string;
-  value: string;
+  value: number;
   hint: string;
   icon: LucideIcon;
-  tone: 'brand' | 'success' | 'danger' | 'neutral';
+  tone: 'brand' | 'success' | 'danger';
 }
 
-const TONE_STYLES: Record<StatCardProps['tone'], { bg: string; fg: string }> = {
-  brand: { bg: '#EEF0F8', fg: BRAND },
-  success: { bg: '#ECFDF5', fg: '#047857' },
-  danger: { bg: '#FEF2F2', fg: '#B91C1C' },
-  neutral: { bg: '#F1F5F9', fg: '#334155' },
+const TONE: Record<
+  StatCardProps['tone'],
+  { bg: string; fg: string }
+> = {
+  brand: { bg: 'bg-primary-soft', fg: 'text-primary' },
+  success: { bg: 'bg-success-soft', fg: 'text-success' },
+  danger: { bg: 'bg-destructive-soft', fg: 'text-destructive' },
 };
 
-function KpiGrid({ stats }: { stats: StatCardProps[] }) {
+function KpiGrid({
+  stats,
+  isLoading,
+}: {
+  stats: StatCardProps[];
+  isLoading: boolean;
+}) {
   return (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
       {stats.map((s) => (
-        <StatCard key={s.label} {...s} />
+        <StatCard key={s.label} {...s} isLoading={isLoading} />
       ))}
     </div>
   );
 }
 
-function StatCard({ label, value, hint, icon: Icon, tone }: StatCardProps) {
-  const t = TONE_STYLES[tone];
+function StatCard({
+  label,
+  value,
+  hint,
+  icon: Icon,
+  tone,
+  isLoading,
+}: StatCardProps & { isLoading: boolean }) {
+  const t = TONE[tone];
   return (
-    <div className="group relative overflow-hidden rounded-xl border border-slate-200 bg-white p-5 transition hover:border-slate-300 hover:shadow-sm">
+    <Card className="group relative overflow-hidden p-5 transition-all hover:-translate-y-px hover:shadow-md">
       <div className="flex items-start justify-between">
-        <span className="text-[11px] font-medium uppercase tracking-wider text-slate-500">
+        <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
           {label}
         </span>
         <span
-          className="flex h-9 w-9 items-center justify-center rounded-lg"
-          style={{ backgroundColor: t.bg, color: t.fg }}
+          className={cn(
+            'flex h-9 w-9 items-center justify-center rounded-lg',
+            t.bg,
+            t.fg,
+          )}
         >
           <Icon className="h-4 w-4" />
         </span>
       </div>
-      <div className="mt-3 text-3xl font-semibold tracking-tight text-slate-900">
-        {value}
+      <div className="mt-3 text-3xl font-semibold tracking-tight text-foreground">
+        {isLoading ? <Skeleton className="inline-block h-8 w-12 align-middle" /> : value}
       </div>
-      <div className="mt-1 text-xs text-slate-500">{hint}</div>
-    </div>
+      <div className="mt-1 text-xs text-muted-foreground">{hint}</div>
+    </Card>
   );
 }
 
-function Card({
+function SectionCard({
   title,
   children,
   action,
@@ -394,15 +418,13 @@ function Card({
   className?: string;
 }) {
   return (
-    <section
-      className={`rounded-xl border border-slate-200 bg-white p-6 ${className ?? ''}`}
-    >
+    <Card className={cn('p-6', className)}>
       <div className="mb-4 flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-slate-800">{title}</h2>
+        <h2 className="text-sm font-semibold text-foreground">{title}</h2>
         {action}
       </div>
       {children}
-    </section>
+    </Card>
   );
 }
 
@@ -414,18 +436,21 @@ function RecentRequestList({
   dense?: boolean;
 }) {
   return (
-    <ul className="divide-y divide-slate-100">
+    <ul className="divide-y divide-border">
       {rows.map((r) => (
         <li key={r.id}>
           <Link
             href={`/requests/${r.id}` as never}
-            className={`flex items-center gap-3 ${dense ? 'py-2' : 'py-3'} transition hover:bg-slate-50/60`}
+            className={cn(
+              'flex items-center gap-3 rounded-lg px-2 -mx-2 transition-colors hover:bg-muted/60',
+              dense ? 'py-2' : 'py-3',
+            )}
           >
             <span className="flex-1 min-w-0">
-              <span className="block truncate text-sm font-medium text-slate-800">
+              <span className="block truncate text-sm font-medium text-foreground">
                 {summarize(r.description)}
               </span>
-              <span className="mt-0.5 flex items-center gap-2 text-[11px] text-slate-500">
+              <span className="mt-0.5 flex items-center gap-2 text-[11px] text-muted-foreground">
                 <span className="font-mono">{r.reference}</span>
                 <span>·</span>
                 <span>{r.requesterName}</span>
@@ -434,8 +459,25 @@ function RecentRequestList({
               </span>
             </span>
             <StatusBadge status={r.status as RequestStatus} />
-            <ArrowUpRight className="h-4 w-4 text-slate-300" />
+            <ArrowUpRight className="h-4 w-4 text-muted-foreground/60" />
           </Link>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function RequestListSkeleton({ compact }: { compact?: boolean }) {
+  const count = compact ? 3 : 4;
+  return (
+    <ul className="divide-y divide-border">
+      {Array.from({ length: count }).map((_, i) => (
+        <li key={i} className="flex items-center gap-3 py-3">
+          <div className="flex-1 space-y-2">
+            <Skeleton className="h-3 w-3/4" />
+            <Skeleton className="h-2 w-1/2" />
+          </div>
+          <Skeleton className="h-5 w-16 rounded-full" />
         </li>
       ))}
     </ul>
@@ -463,27 +505,23 @@ function EmptyState({
 }) {
   return (
     <div
-      className={`flex flex-col items-center justify-center rounded-lg border border-dashed border-slate-200 text-center ${
-        compact ? 'px-4 py-8' : 'px-6 py-12'
-      }`}
+      className={cn(
+        'flex flex-col items-center justify-center rounded-lg border border-dashed border-border text-center',
+        compact ? 'px-4 py-8' : 'px-6 py-12',
+      )}
     >
-      <span
-        className="flex h-10 w-10 items-center justify-center rounded-full"
-        style={{ backgroundColor: '#EEF0F8', color: BRAND }}
-      >
+      <span className="flex h-10 w-10 items-center justify-center rounded-full bg-primary-soft text-primary-soft-foreground">
         <Icon className="h-5 w-5" />
       </span>
-      <p className="mt-3 text-sm font-medium text-slate-800">{title}</p>
-      <p className="mt-1 max-w-sm text-xs text-slate-500">{description}</p>
+      <p className="mt-3 text-sm font-medium text-foreground">{title}</p>
+      <p className="mt-1 max-w-sm text-xs text-muted-foreground">{description}</p>
       {cta && (
-        <Link
-          href={cta.href}
-          className="mt-4 inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold text-white transition hover:opacity-90"
-          style={{ backgroundColor: BRAND }}
-        >
-          {cta.label}
-          <ArrowUpRight className="h-3.5 w-3.5" />
-        </Link>
+        <Button asChild size="sm" className="mt-4">
+          <Link href={cta.href}>
+            {cta.label}
+            <ArrowUpRight />
+          </Link>
+        </Button>
       )}
     </div>
   );
@@ -503,19 +541,16 @@ function QuickAction({
   return (
     <Link
       href={href}
-      className="group flex items-center gap-3 rounded-lg border border-slate-200 px-3 py-3 transition hover:border-slate-300 hover:bg-slate-50"
+      className="group flex items-center gap-3 rounded-lg border border-border px-3 py-3 transition-all hover:-translate-y-px hover:border-foreground/15 hover:bg-muted/50 hover:shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
     >
-      <span
-        className="flex h-9 w-9 items-center justify-center rounded-lg"
-        style={{ backgroundColor: '#EEF0F8', color: BRAND }}
-      >
+      <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary-soft text-primary-soft-foreground">
         <Icon className="h-4 w-4" />
       </span>
       <span className="flex-1">
-        <span className="block text-sm font-medium text-slate-800">{title}</span>
-        <span className="block text-xs text-slate-500">{subtitle}</span>
+        <span className="block text-sm font-medium text-foreground">{title}</span>
+        <span className="block text-xs text-muted-foreground">{subtitle}</span>
       </span>
-      <ArrowUpRight className="h-4 w-4 text-slate-300 transition group-hover:translate-x-0.5 group-hover:text-slate-500" />
+      <ArrowUpRight className="h-4 w-4 text-muted-foreground/60 transition-transform group-hover:translate-x-0.5 group-hover:text-foreground" />
     </Link>
   );
 }
