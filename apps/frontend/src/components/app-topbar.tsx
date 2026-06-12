@@ -16,6 +16,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { ThemeToggle } from '@/components/theme-toggle';
 
 const PAGE_TITLES: Record<string, string> = {
   '/dashboard': 'Tableau de bord',
@@ -75,6 +76,8 @@ export function AppTopbar() {
       </div>
 
       <div className="flex items-center gap-2">
+        <ThemeToggle />
+
         <button
           type="button"
           aria-label="Notifications"
