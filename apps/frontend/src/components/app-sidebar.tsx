@@ -56,7 +56,7 @@ export function AppSidebar() {
   const sections = buildNav(user?.role);
 
   return (
-    <aside className="hidden w-64 shrink-0 flex-col border-r border-border bg-card lg:flex">
+    <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col border-r border-border bg-card lg:flex">
       <div className="flex h-16 items-center gap-3 border-b border-border px-6">
         <Image
           src="/logos/logo.png"
