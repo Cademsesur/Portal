@@ -4,53 +4,152 @@
 
 @layer base {
   :root {
-    /* SESUR brand palette */
-    --background: 40 20% 98%;         /* blanc cassé */
-    --foreground: 220 30% 12%;
+    /* ─────────────────────────────────────────────────────────────
+       SESUR FLOW — Design tokens
+       Hue 226 derived from brand color #243064 (rgb 36/48/100).
+       ───────────────────────────────────────────────────────────── */
 
-    --primary: 220 60% 18%;            /* bleu nuit */
-    --primary-foreground: 40 20% 98%;
-
-    --accent: 190 90% 50%;             /* cyan */
-    --accent-foreground: 220 30% 12%;
-
-    --success: 150 60% 38%;            /* vert validation */
-    --success-foreground: 0 0% 100%;
-
-    --destructive: 0 75% 50%;          /* rouge rejection */
-    --destructive-foreground: 0 0% 100%;
-
-    --muted: 220 14% 96%;
-    --muted-foreground: 220 10% 40%;
+    /* Neutral / surfaces */
+    --background: 220 30% 99%;        /* page background, near-white */
+    --foreground: 222 25% 11%;        /* default text */
 
     --card: 0 0% 100%;
-    --card-foreground: 220 30% 12%;
+    --card-foreground: 222 25% 11%;
 
-    --border: 220 13% 91%;
-    --input: 220 13% 91%;
-    --ring: 220 60% 18%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 25% 11%;
 
-    --radius: 0.5rem;
+    --muted: 220 18% 96%;
+    --muted-foreground: 220 10% 42%;
+
+    --border: 220 16% 90%;
+    --input: 220 16% 90%;
+
+    /* Brand primary — palette derived from #243064 */
+    --primary-50: 226 50% 97%;
+    --primary-100: 226 50% 93%;
+    --primary-200: 226 47% 84%;
+    --primary-300: 226 47% 72%;
+    --primary-400: 226 47% 55%;
+    --primary-500: 226 47% 40%;
+    --primary-600: 226 47% 32%;
+    --primary-700: 226 47% 27%;       /* THE brand color */
+    --primary-800: 226 47% 21%;
+    --primary-900: 226 47% 15%;
+    --primary-950: 226 50% 9%;
+
+    --primary: var(--primary-700);
+    --primary-foreground: 0 0% 100%;
+    --primary-soft: var(--primary-50);
+    --primary-soft-foreground: var(--primary-700);
+
+    /* Accent (cyan) */
+    --accent: 190 90% 50%;
+    --accent-foreground: 222 25% 11%;
+
+    /* Secondary surface */
+    --secondary: 220 18% 96%;
+    --secondary-foreground: 222 25% 18%;
+
+    /* Semantic */
+    --success: 158 60% 35%;
+    --success-foreground: 0 0% 100%;
+    --success-soft: 158 70% 95%;
+    --success-soft-foreground: 158 75% 22%;
+
+    --warning: 35 92% 50%;
+    --warning-foreground: 35 95% 12%;
+    --warning-soft: 40 95% 95%;
+    --warning-soft-foreground: 30 80% 30%;
+
+    --destructive: 0 75% 50%;
+    --destructive-foreground: 0 0% 100%;
+    --destructive-soft: 0 90% 96%;
+    --destructive-soft-foreground: 0 75% 38%;
+
+    /* Focus ring */
+    --ring: var(--primary-500);
+    --ring-offset: 220 30% 99%;
+
+    /* Geometry */
+    --radius: 0.75rem;
+
+    /* Elevation */
+    --shadow-color: 222 25% 25%;
+    --shadow-xs: 0 1px 2px 0 hsl(var(--shadow-color) / 0.05);
+    --shadow-sm:
+      0 1px 2px 0 hsl(var(--shadow-color) / 0.05),
+      0 1px 3px 0 hsl(var(--shadow-color) / 0.06);
+    --shadow-md:
+      0 2px 4px -1px hsl(var(--shadow-color) / 0.06),
+      0 4px 8px -2px hsl(var(--shadow-color) / 0.08);
+    --shadow-lg:
+      0 10px 15px -3px hsl(var(--shadow-color) / 0.08),
+      0 4px 6px -4px hsl(var(--shadow-color) / 0.05);
+    --shadow-xl:
+      0 20px 25px -5px hsl(var(--shadow-color) / 0.1),
+      0 8px 10px -6px hsl(var(--shadow-color) / 0.06);
   }
 
   .dark {
-    --background: 220 30% 8%;
-    --foreground: 40 20% 96%;
-    --primary: 190 90% 55%;
-    --primary-foreground: 220 30% 10%;
-    --accent: 190 90% 50%;
-    --accent-foreground: 220 30% 12%;
-    --success: 150 60% 45%;
+    --background: 222 30% 8%;
+    --foreground: 220 20% 96%;
+    --card: 222 28% 11%;
+    --card-foreground: 220 20% 96%;
+    --popover: 222 28% 11%;
+    --popover-foreground: 220 20% 96%;
+    --muted: 222 20% 16%;
+    --muted-foreground: 220 12% 68%;
+    --border: 222 18% 20%;
+    --input: 222 18% 20%;
+
+    --primary: var(--primary-400);
+    --primary-foreground: 222 25% 11%;
+    --primary-soft: 226 30% 18%;
+    --primary-soft-foreground: 226 70% 80%;
+
+    --accent: 190 90% 55%;
+    --accent-foreground: 222 25% 11%;
+    --secondary: 222 20% 16%;
+    --secondary-foreground: 220 20% 96%;
+
+    --success: 158 55% 45%;
+    --success-soft: 158 30% 18%;
+    --success-soft-foreground: 158 70% 75%;
+
+    --warning: 35 90% 55%;
+    --warning-soft: 35 30% 18%;
+    --warning-soft-foreground: 35 90% 80%;
+
     --destructive: 0 70% 55%;
-    --muted: 220 20% 16%;
-    --muted-foreground: 220 10% 65%;
-    --card: 220 30% 12%;
-    --card-foreground: 40 20% 96%;
-    --border: 220 20% 20%;
-    --input: 220 20% 20%;
-    --ring: 190 90% 55%;
+    --destructive-soft: 0 30% 20%;
+    --destructive-soft-foreground: 0 80% 80%;
+
+    --ring: var(--primary-400);
+    --ring-offset: 222 30% 8%;
+
+    --shadow-color: 0 0% 0%;
   }
 
-  * { @apply border-border; }
-  body { @apply bg-background text-foreground antialiased; }
+  * {
+    @apply border-border;
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-feature-settings: 'cv11', 'ss01';
+  }
+
+  ::selection {
+    @apply bg-primary/15 text-foreground;
+  }
+
+  /* Focus visible — accessible by default */
+  :focus-visible {
+    @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
+  }
 }
