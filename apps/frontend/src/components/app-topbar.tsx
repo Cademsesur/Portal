@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
-import { Bell, ChevronDown, LogOut, UserRound } from 'lucide-react';
+import { ChevronDown, LogOut, UserRound } from 'lucide-react';
 import { useCurrentUser } from '@/features/auth/hooks/use-current-user';
 import { logout } from '@/features/auth/api/auth.api';
 import { ROLE_LABELS, type Role } from '@/lib/brand';
@@ -17,6 +17,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { ThemeToggle } from '@/components/theme-toggle';
+import { NotificationBell } from '@/components/notification-bell';
 
 const PAGE_TITLES: Record<string, string> = {
   '/dashboard': 'Tableau de bord',
@@ -77,18 +78,7 @@ export function AppTopbar() {
 
       <div className="flex items-center gap-2">
         <ThemeToggle />
-
-        <button
-          type="button"
-          aria-label="Notifications"
-          className="relative rounded-full border border-border bg-card p-2 text-muted-foreground transition-colors hover:border-foreground/20 hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        >
-          <Bell className="h-4 w-4" />
-          <span
-            aria-hidden
-            className="absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full bg-primary"
-          />
-        </button>
+        <NotificationBell />
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>

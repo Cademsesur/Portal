@@ -64,7 +64,7 @@ function Hero({
   role: string;
 }) {
   return (
-    <section className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary-700 via-primary-800 to-primary-950 px-8 py-9 text-primary-foreground shadow-md">
+    <section className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary-700 via-primary-800 to-primary-950 px-8 py-9 text-white shadow-md">
       <div
         aria-hidden
         className="pointer-events-none absolute -right-16 -top-16 h-72 w-72 rounded-full"

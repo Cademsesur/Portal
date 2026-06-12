@@ -268,7 +268,7 @@ function RequestSheet({ request }: { request: PurchaseRequestDetail }) {
 
   return (
     <article className="overflow-hidden rounded-2xl border border-border bg-card">
-      <header className="bg-gradient-to-br from-primary-700 via-primary-800 to-primary-950 px-6 py-5 text-primary-foreground">
+      <header className="bg-gradient-to-br from-primary-700 via-primary-800 to-primary-950 px-6 py-5 text-white">
         <div className="flex items-center justify-between">
           <div>
             <p className="text-[10px] uppercase tracking-[0.18em] text-white/70">
