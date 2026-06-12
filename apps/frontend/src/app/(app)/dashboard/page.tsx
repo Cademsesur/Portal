@@ -1,5 +1,6 @@
 'use client';
 
+import { useMemo } from 'react';
 import type { Route } from 'next';
 import Link from 'next/link';
 import {
@@ -15,6 +16,14 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { useCurrentUser } from '@/features/auth/hooks/use-current-user';
+import { useMyRequests } from '@/features/requests/hooks/use-my-requests';
+import { usePendingRequests } from '@/features/requests/hooks/use-pending-requests';
+import { useDecidedRequests } from '@/features/requests/hooks/use-decided-requests';
+import { StatusBadge } from '@/features/requests/components/status-badge';
+import type {
+  PurchaseRequestSummary,
+  RequestStatus,
+} from '@/features/requests/api/requests.api';
 import {
   BRAND,
   ROLE_LABELS,
@@ -23,6 +32,8 @@ import {
   isEmployeeLike,
   type Role,
 } from '@/lib/brand';
+
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 export default function DashboardPage() {
   const { data: user } = useCurrentUser();
@@ -123,24 +134,43 @@ function Hero({
 }
 
 function EmployeeDashboard({ role }: { role: string }) {
-  const stats: StatCardProps[] = [
+  const { data: requests = [], isLoading } = useMyRequests();
+
+  const stats = useMemo(() => {
+    const since30 = Date.now() - 30 * DAY_MS;
+    return {
+      pending: requests.filter(
+        (r) => r.status === 'SUBMITTED' || r.status === 'UNDER_REVIEW',
+      ).length,
+      approved30: requests.filter(
+        (r) => r.status === 'APPROVED' && isAfter(r.decidedAt, since30),
+      ).length,
+      rejected30: requests.filter(
+        (r) => r.status === 'REJECTED' && isAfter(r.decidedAt, since30),
+      ).length,
+    };
+  }, [requests]);
+
+  const recent = requests.slice(0, 5);
+
+  const cards: StatCardProps[] = [
     {
       label: 'Mes demandes en cours',
-      value: '—',
+      value: formatStat(stats.pending, isLoading),
       hint: 'En attente de validation DAF',
       icon: Clock,
       tone: 'brand',
     },
     {
       label: 'Approuvées',
-      value: '—',
+      value: formatStat(stats.approved30, isLoading),
       hint: 'Cumul des 30 derniers jours',
       icon: CheckCircle2,
       tone: 'success',
     },
     {
       label: 'Rejetées',
-      value: '—',
+      value: formatStat(stats.rejected30, isLoading),
       hint: 'À reformuler si besoin',
       icon: XCircle,
       tone: 'danger',
@@ -149,20 +179,28 @@ function EmployeeDashboard({ role }: { role: string }) {
 
   return (
     <>
-      <KpiGrid stats={stats} />
+      <KpiGrid stats={cards} />
 
       <div className="grid gap-6 lg:grid-cols-3">
-        <Card className="lg:col-span-2" title="Vos dernières demandes" action={
-          <Link href="/requests" className="text-xs font-medium hover:underline" style={{ color: BRAND }}>
-            Tout voir →
-          </Link>
-        }>
-          <EmptyState
-            icon={FileText}
-            title="Aucune demande pour le moment"
-            description="Initiez une demande d'achat — elle sera transmise à la DAF pour validation."
-            cta={{ href: '/requests/new', label: 'Créer une demande' }}
-          />
+        <Card
+          className="lg:col-span-2"
+          title="Vos dernières demandes"
+          action={
+            <Link href="/requests" className="text-xs font-medium hover:underline" style={{ color: BRAND }}>
+              Tout voir →
+            </Link>
+          }
+        >
+          {recent.length === 0 ? (
+            <EmptyState
+              icon={FileText}
+              title="Aucune demande pour le moment"
+              description="Initiez une demande d'achat — elle sera transmise à la DAF pour validation."
+              cta={{ href: '/requests/new', label: 'Créer une demande' }}
+            />
+          ) : (
+            <RecentRequestList rows={recent} />
+          )}
         </Card>
 
         <Card title="Actions rapides">
@@ -195,24 +233,45 @@ function EmployeeDashboard({ role }: { role: string }) {
 }
 
 function DafDashboard() {
-  const stats: StatCardProps[] = [
+  const { data: pending = [], isLoading: pendingLoading } = usePendingRequests();
+  const { data: decided = [], isLoading: decidedLoading } = useDecidedRequests(30);
+
+  const stats = useMemo(() => {
+    const startOfMonth = (() => {
+      const d = new Date();
+      d.setDate(1);
+      d.setHours(0, 0, 0, 0);
+      return d.getTime();
+    })();
+    const inThisMonth = (r: PurchaseRequestSummary) => isAfter(r.decidedAt, startOfMonth);
+    return {
+      pending: pending.length,
+      approvedMonth: decided.filter((r) => r.status === 'APPROVED' && inThisMonth(r)).length,
+      rejectedMonth: decided.filter((r) => r.status === 'REJECTED' && inThisMonth(r)).length,
+    };
+  }, [pending, decided]);
+
+  const queue = pending.slice(0, 5);
+  const recentDecisions = decided.slice(0, 5);
+
+  const cards: StatCardProps[] = [
     {
       label: 'À valider',
-      value: '—',
+      value: formatStat(stats.pending, pendingLoading),
       hint: 'En attente de votre décision',
       icon: ClipboardCheck,
       tone: 'brand',
     },
     {
       label: 'Approuvées ce mois',
-      value: '—',
+      value: formatStat(stats.approvedMonth, decidedLoading),
       hint: 'Toutes demandes confondues',
       icon: CheckCircle2,
       tone: 'success',
     },
     {
       label: 'Rejetées ce mois',
-      value: '—',
+      value: formatStat(stats.rejectedMonth, decidedLoading),
       hint: 'Motifs disponibles dans le détail',
       icon: XCircle,
       tone: 'danger',
@@ -221,28 +280,40 @@ function DafDashboard() {
 
   return (
     <>
-      <KpiGrid stats={stats} />
+      <KpiGrid stats={cards} />
 
       <div className="grid gap-6 lg:grid-cols-3">
-        <Card className="lg:col-span-2" title="File d'arbitrage" action={
-          <Link href="/approvals" className="text-xs font-medium hover:underline" style={{ color: BRAND }}>
-            Ouvrir la file →
-          </Link>
-        }>
-          <EmptyState
-            icon={ClipboardCheck}
-            title="Aucune demande en attente"
-            description="Quand un collaborateur soumettra une demande, elle apparaîtra ici pour validation."
-          />
+        <Card
+          className="lg:col-span-2"
+          title="File d'arbitrage"
+          action={
+            <Link href="/approvals" className="text-xs font-medium hover:underline" style={{ color: BRAND }}>
+              Ouvrir la file →
+            </Link>
+          }
+        >
+          {queue.length === 0 ? (
+            <EmptyState
+              icon={ClipboardCheck}
+              title="Aucune demande en attente"
+              description="Quand un collaborateur soumettra une demande, elle apparaîtra ici pour validation."
+            />
+          ) : (
+            <RecentRequestList rows={queue} />
+          )}
         </Card>
 
         <Card title="Activité récente">
-          <EmptyState
-            icon={ShieldCheck}
-            title="Pas encore d'activité"
-            description="Les approbations et rejets récents s'afficheront ici."
-            compact
-          />
+          {recentDecisions.length === 0 ? (
+            <EmptyState
+              icon={ShieldCheck}
+              title="Pas encore d'activité"
+              description="Les approbations et rejets récents s'afficheront ici."
+              compact
+            />
+          ) : (
+            <RecentRequestList rows={recentDecisions} dense />
+          )}
         </Card>
       </div>
     </>
@@ -252,6 +323,16 @@ function DafDashboard() {
 // ─────────────────────────────────────────────────────────────
 // UI primitives
 // ─────────────────────────────────────────────────────────────
+
+function formatStat(value: number, isLoading: boolean): string {
+  if (isLoading) return '…';
+  return String(value);
+}
+
+function isAfter(iso: string | null, sinceMs: number): boolean {
+  if (!iso) return false;
+  return new Date(iso).getTime() >= sinceMs;
+}
 
 interface StatCardProps {
   label: string;
@@ -323,6 +404,48 @@ function Card({
       {children}
     </section>
   );
+}
+
+function RecentRequestList({
+  rows,
+  dense,
+}: {
+  rows: PurchaseRequestSummary[];
+  dense?: boolean;
+}) {
+  return (
+    <ul className="divide-y divide-slate-100">
+      {rows.map((r) => (
+        <li key={r.id}>
+          <Link
+            href={`/requests/${r.id}` as never}
+            className={`flex items-center gap-3 ${dense ? 'py-2' : 'py-3'} transition hover:bg-slate-50/60`}
+          >
+            <span className="flex-1 min-w-0">
+              <span className="block truncate text-sm font-medium text-slate-800">
+                {summarize(r.description)}
+              </span>
+              <span className="mt-0.5 flex items-center gap-2 text-[11px] text-slate-500">
+                <span className="font-mono">{r.reference}</span>
+                <span>·</span>
+                <span>{r.requesterName}</span>
+                <span>·</span>
+                <span>{new Date(r.createdAt).toLocaleDateString('fr-FR')}</span>
+              </span>
+            </span>
+            <StatusBadge status={r.status as RequestStatus} />
+            <ArrowUpRight className="h-4 w-4 text-slate-300" />
+          </Link>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function summarize(text: string): string {
+  const trimmed = text.trim();
+  if (trimmed.length <= 70) return trimmed;
+  return `${trimmed.slice(0, 70)}…`;
 }
 
 function EmptyState({

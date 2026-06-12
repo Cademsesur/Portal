@@ -1,10 +1,59 @@
 import Image from 'next/image';
+import { AlertTriangle } from 'lucide-react';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000/api/v1';
 
 const BRAND = '#243064';
 
-export default function LoginPage() {
+const PROVIDER_LABEL: Record<string, string> = {
+  microsoft: 'Microsoft',
+  google: 'Google',
+};
+
+const REASON_MESSAGE: Record<string, string> = {
+  state_invalid:
+    "Lien de connexion expiré ou déjà utilisé. Recommencez en cliquant à nouveau sur l'un des boutons ci-dessous.",
+  missing_params:
+    'La réponse du fournisseur SSO est incomplète. Réessayez ; si le problème persiste, contactez votre administrateur.',
+  provider_error:
+    'Le fournisseur SSO a refusé la connexion. Vérifiez votre compte et réessayez.',
+  no_invitation:
+    "Aucune invitation n'existe pour ce compte. Demandez à votre administrateur SESUR de vous inviter avant de vous connecter.",
+  invitation_expired:
+    'Votre invitation a expiré. Demandez à votre administrateur de la renvoyer.',
+  account_disabled:
+    'Votre compte a été désactivé. Contactez votre administrateur SESUR.',
+  domain_forbidden:
+    "Le domaine de votre adresse email n'est pas autorisé pour la connexion Microsoft. Utilisez votre compte SESUR officiel.",
+  token_exchange_failed:
+    "L'échange de jetons avec le fournisseur SSO a échoué. Réessayez dans un instant.",
+  profile_incomplete:
+    "Le profil renvoyé par le fournisseur SSO est incomplet. Contactez votre administrateur.",
+  email_unverified:
+    "L'adresse email Google associée à ce compte n'a pas été vérifiée. Vérifiez-la depuis votre compte Google puis réessayez.",
+  unexpected:
+    "Une erreur inattendue est survenue pendant la connexion. Réessayez dans un instant.",
+};
+
+function describeSsoError(provider?: string, reason?: string): string | null {
+  if (!provider && !reason) return null;
+  const providerLabel = provider ? PROVIDER_LABEL[provider] ?? provider : 'SSO';
+  const message = reason && REASON_MESSAGE[reason]
+    ? REASON_MESSAGE[reason]
+    : "Connexion impossible. Réessayez ou contactez votre administrateur.";
+  return `Échec de connexion ${providerLabel}. ${message}`;
+}
+
+export default function LoginPage({
+  searchParams,
+}: {
+  searchParams: { error?: string; provider?: string; reason?: string };
+}) {
+  const errorMessage =
+    searchParams.error === 'sso'
+      ? describeSsoError(searchParams.provider, searchParams.reason)
+      : null;
+
   return (
     <main className="grid min-h-screen grid-cols-1 bg-white lg:grid-cols-2">
       {/* Left column — white, SSO-only */}
@@ -40,6 +89,16 @@ export default function LoginPage() {
             Connectez-vous avec votre compte professionnel SESUR pour accéder à
             vos demandes d&apos;achat et approbations.
           </p>
+
+          {errorMessage && (
+            <div
+              role="alert"
+              className="mt-8 flex items-start gap-3 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700"
+            >
+              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+              <span>{errorMessage}</span>
+            </div>
+          )}
 
           <div className="mt-12 space-y-3">
             <SsoButton

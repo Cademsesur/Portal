@@ -1,6 +1,6 @@
 'use client';
 
-import { use } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
 import {
   ArrowLeft,
@@ -20,19 +20,34 @@ import type {
 } from '@/features/requests/api/requests.api';
 import { PURCHASE_TYPES } from '@/features/requests/schemas/purchase-request-form.schema';
 import { StatusBadge } from '@/features/requests/components/status-badge';
+import { DecisionModal } from '@/features/requests/components/decision-modal';
+import { ApiError } from '@/lib/api-client';
+import { Forbidden } from '@/components/forbidden';
 
 export default function RequestDetailPage({
   params,
 }: {
-  params: Promise<{ id: string }>;
+  params: { id: string };
 }) {
-  const { id } = use(params);
+  const { id } = params;
   const { data: user } = useCurrentUser();
-  const { data: request, isLoading } = useRequest(id);
+  const { data: request, isLoading, error } = useRequest(id);
   const decideMutation = useDecideRequest(id);
+  const [pendingDecision, setPendingDecision] = useState<'APPROVED' | 'REJECTED' | null>(null);
 
   if (!user) return null;
   if (isLoading) return null;
+
+  if (error instanceof ApiError && error.status === 403) {
+    return (
+      <Forbidden
+        title="Vous n'avez pas accès à cette demande"
+        message="Seul le demandeur et la DAF peuvent consulter le détail d'une demande d'achat."
+        backHref={canValidate(user.role) ? '/approvals' : '/requests'}
+        backLabel="Retour"
+      />
+    );
+  }
 
   if (!request) {
     return (
@@ -64,12 +79,14 @@ export default function RequestDetailPage({
   const canDecide = canValidate(user.role) && request.status !== 'APPROVED' && request.status !== 'REJECTED';
   const backHref = canValidate(user.role) ? '/approvals' : '/requests';
 
-  const handleDecision = (decision: 'APPROVED' | 'REJECTED') => {
-    const comment =
-      decision === 'REJECTED'
-        ? window.prompt('Motif du rejet (optionnel) :') ?? undefined
-        : window.prompt('Commentaire (optionnel) :') ?? undefined;
-    decideMutation.mutate({ decision, comment: comment || undefined });
+  const confirmDecision = (comment: string | undefined) => {
+    if (!pendingDecision) return;
+    decideMutation.mutate(
+      { decision: pendingDecision, comment },
+      {
+        onSuccess: () => setPendingDecision(null),
+      },
+    );
   };
 
   return (
@@ -133,7 +150,7 @@ export default function RequestDetailPage({
           <div className="flex gap-2">
             <button
               type="button"
-              onClick={() => handleDecision('REJECTED')}
+              onClick={() => setPendingDecision('REJECTED')}
               className="inline-flex items-center gap-1.5 rounded-lg border border-rose-200 px-4 py-2 text-sm font-medium text-rose-600 transition hover:border-rose-300 hover:bg-rose-50"
             >
               <XCircle className="h-4 w-4" />
@@ -141,7 +158,7 @@ export default function RequestDetailPage({
             </button>
             <button
               type="button"
-              onClick={() => handleDecision('APPROVED')}
+              onClick={() => setPendingDecision('APPROVED')}
               className="inline-flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90"
               style={{ backgroundColor: '#047857' }}
             >
@@ -150,6 +167,18 @@ export default function RequestDetailPage({
             </button>
           </div>
         </div>
+      )}
+
+      {pendingDecision && (
+        <DecisionModal
+          decision={pendingDecision}
+          requestReference={request.reference}
+          isPending={decideMutation.isPending}
+          onConfirm={confirmDecision}
+          onClose={() => {
+            if (!decideMutation.isPending) setPendingDecision(null);
+          }}
+        />
       )}
 
       <Timeline request={request} />

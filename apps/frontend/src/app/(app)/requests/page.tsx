@@ -13,6 +13,7 @@ import { BRAND, isEmployeeLike } from '@/lib/brand';
 import { useMyRequests } from '@/features/requests/hooks/use-my-requests';
 import type { RequestStatus } from '@/features/requests/api/requests.api';
 import { StatusBadge } from '@/features/requests/components/status-badge';
+import { Forbidden } from '@/components/forbidden';
 
 const STATUS_FILTERS: Array<{ key: 'ALL' | RequestStatus; label: string }> = [
   { key: 'ALL', label: 'Toutes' },
@@ -44,14 +45,10 @@ export default function RequestsPage() {
   if (!user) return null;
   if (!isEmployeeLike(user.role)) {
     return (
-      <div className="rounded-xl border border-slate-200 bg-white p-8 text-center">
-        <h1 className="text-xl font-semibold" style={{ color: BRAND }}>
-          Cette section n'est pas disponible pour votre rôle
-        </h1>
-        <p className="mt-2 text-sm text-slate-500">
-          Seuls les collaborateurs peuvent soumettre des demandes d'achat.
-        </p>
-      </div>
+      <Forbidden
+        title="Section réservée aux collaborateurs"
+        message="Seuls les collaborateurs peuvent consulter et soumettre des demandes d'achat."
+      />
     );
   }
 

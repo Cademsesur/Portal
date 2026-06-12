@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { forwardRef, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useFieldArray, useForm } from 'react-hook-form';
@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { useCurrentUser } from '@/features/auth/hooks/use-current-user';
 import { BRAND, isEmployeeLike, ROLE_LABELS, type Role } from '@/lib/brand';
+import { Forbidden } from '@/components/forbidden';
 import {
   EMPTY_ITEM,
   PURCHASE_TYPES,
@@ -68,14 +69,10 @@ export default function NewRequestPage() {
   if (!user) return null;
   if (!isEmployeeLike(user.role)) {
     return (
-      <div className="rounded-xl border border-slate-200 bg-white p-8 text-center">
-        <h1 className="text-xl font-semibold" style={{ color: BRAND }}>
-          Action non autorisée
-        </h1>
-        <p className="mt-2 text-sm text-slate-500">
-          Seuls les collaborateurs peuvent soumettre une demande d'achat.
-        </p>
-      </div>
+      <Forbidden
+        title="Action réservée aux collaborateurs"
+        message="Seuls les collaborateurs peuvent soumettre une demande d'achat. Les DAF, administrateurs et super administrateurs gèrent les validations et la configuration."
+      />
     );
   }
 
@@ -309,7 +306,7 @@ export default function NewRequestPage() {
                       <Input
                         type="number"
                         min={1}
-                        {...register(`items.${idx}.quantity` as const)}
+                        {...register(`items.${idx}.quantity` as const, { valueAsNumber: true })}
                       />
                       {errors.items?.[idx]?.quantity && (
                         <p className="mt-1 text-xs text-rose-600">
@@ -480,30 +477,33 @@ function Label({
 const inputClass =
   'w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 placeholder:text-slate-400 transition focus:border-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-100';
 
-const Input = (props: React.InputHTMLAttributes<HTMLInputElement>) => {
-  const { className, ...rest } = props;
-  return <input className={`${inputClass} ${className ?? ''}`} {...rest} />;
-};
+const Input = forwardRef<HTMLInputElement, React.InputHTMLAttributes<HTMLInputElement>>(
+  function Input({ className, ...rest }, ref) {
+    return <input ref={ref} className={`${inputClass} ${className ?? ''}`} {...rest} />;
+  },
+);
 
-const Textarea = (props: React.TextareaHTMLAttributes<HTMLTextAreaElement>) => {
-  const { className, ...rest } = props;
-  return (
-    <textarea
-      className={`${inputClass} resize-y leading-relaxed ${className ?? ''}`}
-      {...rest}
-    />
-  );
-};
+const Textarea = forwardRef<HTMLTextAreaElement, React.TextareaHTMLAttributes<HTMLTextAreaElement>>(
+  function Textarea({ className, ...rest }, ref) {
+    return (
+      <textarea
+        ref={ref}
+        className={`${inputClass} resize-y leading-relaxed ${className ?? ''}`}
+        {...rest}
+      />
+    );
+  },
+);
 
-const CheckboxOption = function CheckboxOption(
-  props: React.InputHTMLAttributes<HTMLInputElement> & { label: string },
-) {
-  const { label, className, ...rest } = props;
+const CheckboxOption = forwardRef<
+  HTMLInputElement,
+  React.InputHTMLAttributes<HTMLInputElement> & { label: string }
+>(function CheckboxOption({ label, className, ...rest }, ref) {
   return (
     <label
       className={`group flex cursor-pointer items-center gap-2.5 rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 has-[:checked]:border-transparent has-[:checked]:bg-[#EEF0F8] has-[:checked]:text-[#243064] ${className ?? ''}`}
     >
-      <input type="checkbox" className="sr-only" {...rest} />
+      <input ref={ref} type="checkbox" className="sr-only" {...rest} />
       <span
         className="flex h-4 w-4 items-center justify-center rounded border border-slate-300 bg-white text-white transition group-has-[:checked]:border-transparent group-has-[:checked]:bg-[#243064]"
       >
@@ -512,7 +512,7 @@ const CheckboxOption = function CheckboxOption(
       <span>{label}</span>
     </label>
   );
-};
+});
 
 function SignatureBlock({
   label,

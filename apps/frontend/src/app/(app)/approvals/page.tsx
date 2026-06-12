@@ -14,7 +14,8 @@ import {
 } from 'lucide-react';
 import { useCurrentUser } from '@/features/auth/hooks/use-current-user';
 import { BRAND, canValidate } from '@/lib/brand';
-import { useMyRequests } from '@/features/requests/hooks/use-my-requests';
+import { Forbidden } from '@/components/forbidden';
+import { useDecidedRequests } from '@/features/requests/hooks/use-decided-requests';
 import { usePendingRequests } from '@/features/requests/hooks/use-pending-requests';
 import type {
   PurchaseRequestSummary,
@@ -33,17 +34,17 @@ const TABS: Array<{ key: TabKey; label: string; icon: LucideIcon }> = [
 export default function ApprovalsPage() {
   const { data: user } = useCurrentUser();
   const { data: pending = [] } = usePendingRequests();
-  const { data: mine = [] } = useMyRequests();
+  const { data: decided = [] } = useDecidedRequests(90);
   const [tab, setTab] = useState<TabKey>('PENDING');
   const [search, setSearch] = useState('');
 
   const approved = useMemo(
-    () => mine.filter((r) => r.status === 'APPROVED'),
-    [mine],
+    () => decided.filter((r) => r.status === 'APPROVED'),
+    [decided],
   );
   const rejected = useMemo(
-    () => mine.filter((r) => r.status === 'REJECTED'),
-    [mine],
+    () => decided.filter((r) => r.status === 'REJECTED'),
+    [decided],
   );
 
   const counts = {
@@ -69,21 +70,10 @@ export default function ApprovalsPage() {
 
   if (!canValidate(user.role)) {
     return (
-      <div className="mx-auto max-w-lg rounded-xl border border-slate-200 bg-white p-10 text-center">
-        <span
-          className="mx-auto flex h-12 w-12 items-center justify-center rounded-full"
-          style={{ backgroundColor: '#EEF0F8', color: BRAND }}
-        >
-          <ShieldAlert className="h-6 w-6" />
-        </span>
-        <h1 className="mt-4 text-lg font-semibold" style={{ color: BRAND }}>
-          Espace réservé à la DAF
-        </h1>
-        <p className="mt-2 text-sm text-slate-500">
-          Seul le Directeur Administratif et Financier peut consulter, approuver
-          ou rejeter les demandes d'achat de l'organisation.
-        </p>
-      </div>
+      <Forbidden
+        title="Espace réservé à la DAF"
+        message="Seul le Directeur Administratif et Financier peut consulter, approuver ou rejeter les demandes d'achat de l'organisation."
+      />
     );
   }
 

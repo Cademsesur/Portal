@@ -55,6 +55,10 @@ export function listPendingRequests() {
   return apiFetch<PurchaseRequestSummary[]>('/purchase-requests/pending');
 }
 
+export function listDecidedRequests(days = 30) {
+  return apiFetch<PurchaseRequestSummary[]>(`/purchase-requests/decided?days=${days}`);
+}
+
 export function getRequest(id: string) {
   return apiFetch<PurchaseRequestDetail>(`/purchase-requests/${id}`);
 }

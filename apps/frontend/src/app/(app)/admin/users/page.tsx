@@ -5,13 +5,13 @@ import {
   Mail,
   MoreHorizontal,
   RefreshCw,
-  ShieldAlert,
   Trash2,
   UserPlus,
   Users,
 } from 'lucide-react';
 import { ApiError } from '@/lib/api-client';
 import { BRAND, canManageUsers } from '@/lib/brand';
+import { Forbidden } from '@/components/forbidden';
 import { useCurrentUser } from '@/features/auth/hooks/use-current-user';
 import {
   useCreateInvitation,
@@ -32,21 +32,10 @@ export default function AdminUsersPage() {
 
   if (!canManageUsers(me.role)) {
     return (
-      <div className="mx-auto max-w-lg rounded-xl border border-slate-200 bg-white p-10 text-center">
-        <span
-          className="mx-auto flex h-12 w-12 items-center justify-center rounded-full"
-          style={{ backgroundColor: '#EEF0F8', color: BRAND }}
-        >
-          <ShieldAlert className="h-6 w-6" />
-        </span>
-        <h1 className="mt-4 text-lg font-semibold" style={{ color: BRAND }}>
-          Accès refusé
-        </h1>
-        <p className="mt-2 text-sm text-slate-500">
-          Seuls les super administrateurs peuvent gérer les invitations et les
-          utilisateurs.
-        </p>
-      </div>
+      <Forbidden
+        title="Espace réservé aux super administrateurs"
+        message="Seuls les super administrateurs peuvent gérer les invitations et les utilisateurs."
+      />
     );
   }
 
