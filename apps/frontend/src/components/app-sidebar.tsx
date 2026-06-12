@@ -57,14 +57,14 @@ export function AppSidebar() {
 
   return (
     <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col border-r border-border bg-card lg:flex">
-      <div className="flex h-16 items-center justify-center border-b border-border px-6">
+      <div className="flex h-16 items-center justify-center border-b border-border px-4">
         <Image
           src="/logos/logo.png"
           alt="SESUR"
-          width={140}
-          height={36}
+          width={180}
+          height={52}
           priority
-          className="h-9 w-auto dark:brightness-0 dark:invert"
+          className="h-12 w-auto"
         />
       </div>
 
