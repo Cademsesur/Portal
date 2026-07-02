@@ -1,5 +1,5 @@
 import type { CreatePurchaseRequestDto } from '@sesur/shared';
-import { apiFetch } from '@/lib/api-client';
+import { apiFetch, apiFetchBlob } from '@/lib/api-client';
 
 export type RequestStatus =
   | 'DRAFT'
@@ -80,4 +80,42 @@ export function decideRequest(id: string, payload: DecideRequestPayload) {
     method: 'POST',
     json: payload,
   });
+}
+
+export interface DocumentAvailability {
+  decided: boolean;
+  requesterSigned: boolean;
+  approverSigned: boolean;
+  canExport: boolean;
+}
+
+export function getDocumentAvailability(id: string) {
+  return apiFetch<DocumentAvailability>(
+    `/purchase-requests/${id}/document/availability`,
+  );
+}
+
+export type DocumentFormat = 'pdf' | 'docx';
+
+/**
+ * Récupère la fiche pré-remplie (PDF ou Word) puis déclenche le téléchargement
+ * navigateur. Le backend ne l'expose qu'après décision (approuvée/rejetée).
+ */
+export async function downloadRequestDocument(
+  id: string,
+  reference: string,
+  format: DocumentFormat,
+): Promise<void> {
+  const blob = await apiFetchBlob(
+    `/purchase-requests/${id}/document?format=${format}`,
+  );
+  const safeRef = reference.replace(/[^A-Za-z0-9._-]+/g, '-');
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `Demande_${safeRef}.${format}`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
 }

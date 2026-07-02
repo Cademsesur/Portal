@@ -7,6 +7,7 @@ import {
   CheckCircle2,
   Clock,
   FileSearch,
+  PenLine,
   ShieldAlert,
   XCircle,
   type LucideIcon,
@@ -21,6 +22,8 @@ import type {
 import { PURCHASE_TYPES } from '@/features/requests/schemas/purchase-request-form.schema';
 import { StatusBadge } from '@/features/requests/components/status-badge';
 import { DecisionModal } from '@/features/requests/components/decision-modal';
+import { DocumentExport } from '@/features/requests/components/document-export';
+import { useHasSignature } from '@/features/profile/hooks/use-has-signature';
 import { ApiError } from '@/lib/api-client';
 import { Forbidden } from '@/components/forbidden';
 import { Badge } from '@/components/ui/badge';
@@ -41,6 +44,9 @@ export default function RequestDetailPage({
   const { data: request, isLoading, error } = useRequest(id);
   const decideMutation = useDecideRequest(id);
   const [pendingDecision, setPendingDecision] = useState<'APPROVED' | 'REJECTED' | null>(null);
+  const { data: hasSignature } = useHasSignature(
+    !!user && canValidate(user.role),
+  );
 
   if (!user) return null;
   if (isLoading) return null;
@@ -82,6 +88,8 @@ export default function RequestDetailPage({
     canValidate(user.role) &&
     request.status !== 'APPROVED' &&
     request.status !== 'REJECTED';
+  const isDecided =
+    request.status === 'APPROVED' || request.status === 'REJECTED';
   const backHref = canValidate(user.role) ? '/approvals' : '/requests';
 
   const confirmDecision = (comment: string | undefined) => {
@@ -137,6 +145,13 @@ export default function RequestDetailPage({
               Décision le {new Date(request.decidedAt).toLocaleDateString('fr-FR')}
             </span>
           )}
+          {isDecided && (
+            <DocumentExport
+              requestId={request.id}
+              reference={request.reference}
+              viewerIsApprover={canValidate(user.role)}
+            />
+          )}
         </div>
       </header>
 
@@ -152,26 +167,39 @@ export default function RequestDetailPage({
                   Décision DAF en attente
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  Approuvez ou rejetez cette demande. Le demandeur en sera notifié.
+                  {hasSignature === false
+                    ? 'Enregistrez votre signature pour pouvoir décider — elle sera apposée sur le document.'
+                    : 'Approuvez ou rejetez cette demande. Le demandeur en sera notifié.'}
                 </p>
               </div>
             </div>
-            <div className="flex gap-2">
-              <Button
-                variant="destructive-outline"
-                onClick={() => setPendingDecision('REJECTED')}
-              >
-                <XCircle />
-                Rejeter
+            {hasSignature === false ? (
+              <Button asChild variant="outline">
+                <Link href="/profile">
+                  <PenLine />
+                  Ajouter ma signature
+                </Link>
               </Button>
-              <Button
-                variant="success"
-                onClick={() => setPendingDecision('APPROVED')}
-              >
-                <CheckCircle2 />
-                Approuver
-              </Button>
-            </div>
+            ) : (
+              <div className="flex gap-2">
+                <Button
+                  variant="destructive-outline"
+                  disabled={hasSignature !== true}
+                  onClick={() => setPendingDecision('REJECTED')}
+                >
+                  <XCircle />
+                  Rejeter
+                </Button>
+                <Button
+                  variant="success"
+                  disabled={hasSignature !== true}
+                  onClick={() => setPendingDecision('APPROVED')}
+                >
+                  <CheckCircle2 />
+                  Approuver
+                </Button>
+              </div>
+            )}
           </div>
         </Card>
       )}
@@ -262,8 +290,11 @@ function Timeline({ request }: { request: PurchaseRequestDetail }) {
 }
 
 function RequestSheet({ request }: { request: PurchaseRequestDetail }) {
-  const selectedTypes = PURCHASE_TYPES.filter((t) =>
-    request.purchaseTypes.includes(t.key),
+  const selectedTypes = PURCHASE_TYPES.filter(
+    (t) =>
+      request.purchaseTypes.includes(t.key) &&
+      // « Autre » brut est redondant quand le détail libre est renseigné.
+      !(t.key === 'OTHER' && request.otherTypeDetail),
   );
 
   return (

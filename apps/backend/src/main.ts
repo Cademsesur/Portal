@@ -1,6 +1,7 @@
 import { VersioningType } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
+import type { NestExpressApplication } from '@nestjs/platform-express';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
@@ -12,8 +13,13 @@ import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 installFrenchZodErrorMap();
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule, { bufferLogs: true });
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
+    bufferLogs: true,
+  });
   const config = app.get(ConfigService);
+
+  // Les signatures (PNG en data URL) dépassent la limite JSON par défaut (100 Ko).
+  app.useBodyParser('json', { limit: '5mb' });
 
   app.use(helmet());
   app.use(cookieParser());

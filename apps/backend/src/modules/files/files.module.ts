@@ -1,7 +1,12 @@
-import { Module } from '@nestjs/common';
+import { Global, Module } from '@nestjs/common';
+import { StorageService } from './storage.service';
 
 /**
- * Module FILES — upload de pièces jointes via pre-signed URL S3/MinIO.
+ * Module FILES — stockage objet S3/MinIO (documents générés, signatures…).
  */
-@Module({})
+@Global()
+@Module({
+  providers: [StorageService],
+  exports: [StorageService],
+})
 export class FilesModule {}

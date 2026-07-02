@@ -17,5 +17,6 @@ import { PurchaseRequestsController } from './interfaces/purchase-requests.contr
     ListMyRequestsUseCase,
     ListPendingRequestsUseCase,
   ],
+  exports: [GetPurchaseRequestUseCase],
 })
 export class PurchaseRequestsModule {}

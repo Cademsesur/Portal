@@ -6,6 +6,7 @@ import { Calendar, LogOut, Mail, ShieldCheck } from 'lucide-react';
 import { useCurrentUser } from '@/features/auth/hooks/use-current-user';
 import { logout } from '@/features/auth/api/auth.api';
 import { ROLE_LABELS, type Role } from '@/lib/brand';
+import { SignatureCard } from '@/features/profile/components/signature-card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -84,6 +85,8 @@ export default function ProfilePage() {
           )}
         </dl>
       </Card>
+
+      <SignatureCard />
 
       <div className="flex justify-end">
         <Button variant="destructive-outline" onClick={handleLogout}>

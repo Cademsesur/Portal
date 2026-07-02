@@ -45,6 +45,38 @@ export async function apiFetch<T>(path: string, options: RequestOptions = {}): P
   return payload as T;
 }
 
+/**
+ * Variante binaire de `apiFetch` : renvoie un Blob (téléchargement de fichiers).
+ * Conserve l'envoi des cookies httpOnly et la gestion d'ApiError.
+ */
+export async function apiFetchBlob(
+  path: string,
+  options: RequestOptions = {},
+): Promise<Blob> {
+  const { json, headers, ...rest } = options;
+
+  const response = await fetch(`${API_URL}${path}`, {
+    ...rest,
+    credentials: 'include',
+    headers: { ...(headers ?? {}) },
+    body: json !== undefined ? JSON.stringify(json) : rest.body,
+  });
+
+  if (!response.ok) {
+    const isJson = response.headers
+      .get('content-type')
+      ?.includes('application/json');
+    const payload = isJson ? await response.json() : await response.text();
+    throw new ApiError(
+      response.status,
+      payload,
+      extractErrorMessage(payload, response.status),
+    );
+  }
+
+  return response.blob();
+}
+
 function extractErrorMessage(payload: unknown, status: number): string {
   if (typeof payload === 'object' && payload !== null) {
     const p = payload as { message?: unknown; errors?: unknown };

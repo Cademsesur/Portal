@@ -43,6 +43,16 @@ export class DecideRequestUseCase {
       throw new ForbiddenException("Seuls les DAF peuvent valider une demande");
     }
 
+    const approver = await this.prisma.user.findUnique({
+      where: { id: input.approverId },
+      select: { displayName: true, signatureKey: true },
+    });
+    if (!approver?.signatureKey) {
+      throw new BadRequestException(
+        'Vous devez enregistrer votre signature dans votre profil avant de valider une demande.',
+      );
+    }
+
     const detail = await this.prisma.$transaction(async (tx) => {
       const request = await tx.purchaseRequest.findUnique({
         where: { id: input.requestId },
@@ -98,11 +108,6 @@ export class DecideRequestUseCase {
         requesterEmail: updated.requester.email,
         requesterName: updated.requesterName,
       };
-    });
-
-    const approver = await this.prisma.user.findUnique({
-      where: { id: input.approverId },
-      select: { displayName: true },
     });
 
     const event: PurchaseRequestDecidedEvent = {

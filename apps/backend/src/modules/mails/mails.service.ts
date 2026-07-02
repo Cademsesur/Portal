@@ -2,11 +2,18 @@ import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createTransport, type Transporter } from 'nodemailer';
 
+export interface MailAttachment {
+  filename: string;
+  content: Buffer;
+  contentType?: string;
+}
+
 export interface SendMailInput {
   to: string;
   subject: string;
   html: string;
   text?: string;
+  attachments?: MailAttachment[];
 }
 
 @Injectable()
@@ -65,6 +72,11 @@ export class MailsService implements OnModuleInit {
         subject: input.subject,
         html: input.html,
         text: input.text,
+        attachments: input.attachments?.map((a) => ({
+          filename: a.filename,
+          content: a.content,
+          contentType: a.contentType,
+        })),
       });
       this.logger.log(
         `✓ Mail sent to ${input.to} | messageId=${info.messageId} | accepted=[${info.accepted?.join(',')}] | rejected=[${info.rejected?.join(',')}] | response=${info.response}`,
