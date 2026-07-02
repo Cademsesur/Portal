@@ -36,6 +36,9 @@ RUN pnpm --filter @sesur/backend build
 FROM base AS runner
 ENV NODE_ENV=production
 
+# LibreOffice (+ polices) : conversion DOCX → PDF des fiches de demande générées.
+RUN apk add --no-cache libreoffice ttf-dejavu ttf-liberation fontconfig
+
 # Manifests + lockfile pour réinstaller les deps proprement
 COPY pnpm-workspace.yaml package.json pnpm-lock.yaml ./
 COPY apps/backend/package.json ./apps/backend/
